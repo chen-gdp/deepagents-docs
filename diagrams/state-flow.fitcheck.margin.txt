@@ -1,0 +1,5 @@
+FILE: /home/christian/Projects/GAT/ai-agent/docs/deepagents-explorer/diagrams/state-flow.fitcheck.png
+  size: 676x359
+  content bbox: x=33..642, y=28..325
+  margins px: top=28, bottom=33, left=33, right=33
+  margins %: top=7.8, bottom=9.2, left=4.9, right=4.9

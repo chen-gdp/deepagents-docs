@@ -1,0 +1,1612 @@
+[
+  {
+    "id": "app-packages",
+    "group": "Foundations",
+    "title": "The repository is a family of products",
+    "kicker": "Package and responsibility map",
+    "summary": "Separate the reusable Python harness, terminal application, channel host, protocol adapter, evaluations, and optional providers before tracing an execution.",
+    "readingMinutes": 9,
+    "sections": [
+      {
+        "id": "app-packages-boundaries",
+        "title": "Choose the package for your goal",
+        "body": "<p>Start with the product you want to build, not a version number. The same reusable agent can sit behind your Python service, a terminal, a chat channel, or an editor. This Python monorepo packages those responsibilities separately rather than hiding them behind one application's optional-dependencies switch.</p><h3>Choose your starting package</h3><ul><li><strong>Embed an agent in your own application:</strong> use the <code>deepagents</code> SDK (software development kit), whose factory is <code>create_deep_agent</code>.</li><li><strong>Use the terminal coding application:</strong> choose Deep Agents Code, which supplies its own client/server lifecycle and policy.</li><li><strong>Host conversations in chat channels:</strong> study Talon, the experimental long-running host.</li><li><strong>Connect a graph to an editor:</strong> use the Agent Client Protocol (ACP) adapter.</li><li><strong>Measure model behavior:</strong> use the evaluation package and its benchmark integrations.</li></ul><p>For an illustrative “read <code>/notes/brief.txt</code>, write <code>/notes/report.txt</code>” request, the SDK composes the agent and tools. A surrounding application still decides how the request arrives, who approves writes, and where the tools execute. Choose that surrounding owner before installing packages.</p><h3>Translate the choice into an installation and import</h3><p>A distribution name is what an installer resolves; an import name is what Python loads. The reusable <code>deepagents</code> distribution exports its factory, state, filesystem permissions, delegation types, memory, rubric, and profile registration. The table records this pinned revision, not a promise that all packages share one release cadence.</p><div class=\"table-wrap\"><table><thead><tr><th>Directory / distribution</th><th>Import / executable</th><th>Version and Python requirement</th><th>Boundary</th></tr></thead><tbody><tr><td><code>libs/deepagents</code> / deepagents</td><td><code>deepagents</code></td><td>0.7.32; ≥3.11, &lt;4</td><td>Reusable agent harness.</td></tr><tr><td><code>libs/code</code> / deepagents-code</td><td><code>deepagents_code</code>; <code>dcode</code>, <code>deepagents-code</code></td><td>0.2.4; ≥3.14, &lt;3.15</td><td>Terminal coding application and its server/client policy.</td></tr><tr><td><code>libs/talon</code> / deepagents-talon</td><td><code>deepagents_talon</code>; <code>deepagents-talon</code></td><td>0.1.0; ≥3.14, &lt;3.15</td><td>Experimental long-lived channel/scheduling host.</td></tr><tr><td><code>libs/acp</code> / deepagents-acp</td><td><code>deepagents_acp</code>; module entry point</td><td>0.0.13; ≥3.11, &lt;4</td><td>Agent Client Protocol adapter.</td></tr><tr><td><code>libs/evals</code> / deepagents-evals</td><td><code>deepagents_evals</code>, <code>deepagents_harbor</code>; <code>deepagents-evals</code></td><td>0.0.1; ≥3.14, &lt;3.15</td><td>Model-behavior evaluation and benchmark integration.</td></tr></tbody></table></div><aside class=\"callout\"><p>The <code>deepagents</code> SDK exports composition primitives. Importing that SDK does not launch a terminal, connect a chat channel, or provision a sandbox.</p><p>An SDK consumer can remain on Python 3.11 while the current Code application cannot. A checkout containing all packages does not imply one supported interpreter. Follow each package's metadata rather than treating repository-wide prose as a dependency resolver.</p></aside>",
+        "sources": [
+          {
+            "path": "libs/deepagents/pyproject.toml",
+            "start": 1,
+            "end": 8,
+            "label": "SDK distribution metadata"
+          },
+          {
+            "path": "libs/deepagents/deepagents/__init__.py",
+            "start": 1,
+            "end": 48,
+            "label": "SDK public exports"
+          },
+          {
+            "path": "libs/code/pyproject.toml",
+            "start": 5,
+            "end": 13,
+            "label": "Code version and interpreter"
+          },
+          {
+            "path": "libs/code/pyproject.toml",
+            "start": 157,
+            "end": 159,
+            "label": "Code console entrypoints"
+          },
+          {
+            "path": "libs/talon/pyproject.toml",
+            "start": 5,
+            "end": 10,
+            "label": "Talon metadata"
+          },
+          {
+            "path": "libs/talon/pyproject.toml",
+            "start": 89,
+            "end": 90,
+            "label": "Talon executable"
+          },
+          {
+            "path": "libs/acp/pyproject.toml",
+            "start": 5,
+            "end": 10,
+            "label": "ACP metadata"
+          },
+          {
+            "path": "libs/evals/pyproject.toml",
+            "start": 1,
+            "end": 7,
+            "label": "Evaluation metadata"
+          },
+          {
+            "path": "libs/evals/pyproject.toml",
+            "start": 57,
+            "end": 58,
+            "label": "Evaluation executable"
+          }
+        ]
+      },
+      {
+        "id": "app-packages-dependency-direction",
+        "title": "Applications reuse the harness, but are not interchangeable",
+        "body": "<p>Read this dependency map by responsibility, then distinguish checkout development from installed releases. These are independent package relationships, not steps in one launch sequence.</p><ul><li><strong>Code owns the application stack.</strong> Code pins <code>deepagents==0.7.32</code> exactly and directly depends on LangGraph SDK, CLI, and in-memory runtime packages for its client/server architecture. It also includes Anthropic, Google, and OpenAI integrations, Textual/Rich terminal rendering, FastMCP, and QuickJS.</li><li><strong>Provider and UI choices are not SDK requirements.</strong> These choices belong to the application: they are not a claim that every SDK agent uses Textual or includes all those providers.</li><li><strong>Talon reuses, then composes.</strong> Talon depends on both the SDK and Code. It reuses Code facilities such as model configuration and hooks while building its own host and graph. It is not a hidden terminal window attached to Telegram: <code>DeepAgentRuntime._create_graph</code> calls the SDK directly and adds Talon-specific progress, selection, task, background, and approval middleware.</li><li><strong>ACP and evaluations choose their construction boundary.</strong> ACP accepts either a compiled graph or a context-sensitive graph factory. The evaluation package contains both a pytest behavior harness and an installed Harbor adapter; its benchmark graph can import either SDK construction or Code construction.</li><li><strong>Editable sources differ from published constraints.</strong> Local editable paths in <code>tool.uv.sources</code> make checkout development convenient, but published dependency constraints still matter. Code's local path sources include ACP and the five partner packages. Talon's paths point to SDK and Code.</li></ul><aside class=\"callout\"><p>When diagnosing an unexpected method or version, first establish whether the environment imports the checkout or a published wheel; a directory name is not proof of what Python loaded.</p></aside>",
+        "sources": [
+          {
+            "path": "libs/code/pyproject.toml",
+            "start": 26,
+            "end": 67,
+            "label": "Code framework, UI, and provider dependencies"
+          },
+          {
+            "path": "libs/code/pyproject.toml",
+            "start": 216,
+            "end": 223,
+            "label": "Editable workspace sources"
+          },
+          {
+            "path": "libs/talon/pyproject.toml",
+            "start": 22,
+            "end": 49,
+            "label": "Talon dependency direction"
+          },
+          {
+            "path": "libs/talon/pyproject.toml",
+            "start": 125,
+            "end": 127,
+            "label": "Talon checkout sources"
+          },
+          {
+            "path": "libs/talon/deepagents_talon/runtime.py",
+            "start": 494,
+            "end": 550,
+            "label": "Talon builds its own graph"
+          },
+          {
+            "path": "libs/acp/deepagents_acp/server.py",
+            "start": 228,
+            "end": 265,
+            "label": "ACP accepts graph or factory"
+          },
+          {
+            "path": "libs/evals/deepagents_harbor/langgraph_project/langgraph_agent.py",
+            "start": 15,
+            "end": 22,
+            "label": "Benchmark graph imports both construction paths"
+          }
+        ]
+      },
+      {
+        "id": "app-packages-scope",
+        "title": "Whole-repository coverage without pretending every file is a lesson",
+        "body": "<p>The application chapters explain the major runtime contracts and point into implementation and tests. The source atlas complements them for individual functions, provider details, regression tests, scripts, and checked-in assets.</p><ul><li><strong>Read the coverage claim precisely.</strong> “Whole repository” means every package and example family has a place in the map, not that every function has been paraphrased or every test has been executed.</li><li><strong>Keep the JavaScript repository separate.</strong> JavaScript/TypeScript is a separate repository: the root README links to <code>langchain-ai/deepagentsjs</code>. Python QuickJS integration and Talon's JavaScript WhatsApp bridge do not make this checkout the TypeScript SDK implementation.</li><li><strong>Treat external systems as boundaries.</strong> References to Fleet, Harbor, hosted deployment, or external provider SDKs identify boundaries; they do not place those external implementations inside this source tree.</li></ul><aside class=\"callout\"><p>Names are revision-sensitive. The current application is <strong>Deep Agents Code</strong>, with <code>dcode</code> and <code>deepagents-code</code> scripts. Some example comments and older quickstarts still say <code>deepagents-cli</code> or show <code>deepagents</code> as a command. Read those as historical example text, not as the current installed entrypoint contract.</p></aside>",
+        "sources": [
+          {
+            "path": "README.md",
+            "start": 40,
+            "end": 47,
+            "label": "Separate TypeScript SDK and current Code product"
+          },
+          {
+            "path": "libs/code/pyproject.toml",
+            "start": 157,
+            "end": 159,
+            "label": "Authoritative current command names"
+          },
+          {
+            "path": "examples/downloading_agents/README.md",
+            "start": 11,
+            "end": 30,
+            "label": "Historical downloadable-agent quickstart"
+          },
+          {
+            "path": "examples/ralph_mode/ralph_mode.py",
+            "start": 1,
+            "end": 9,
+            "label": "Example retains older naming"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "code-runtime",
+    "group": "Applications",
+    "title": "Deep Agents Code: launch to checkpoint",
+    "kicker": "A terminal client around a server-owned agent",
+    "summary": "Trace the current coding application from CLI dispatch through graph assembly, local or remote tools, approval interrupts, streaming, and recoverable sessions.",
+    "readingMinutes": 15,
+    "sections": [
+      {
+        "id": "code-runtime-launch",
+        "title": "Startup selects an execution surface",
+        "body": "<p>In normal interactive use, two processes share the work. The terminal process owns Textual rendering and user input. An application-owned LangGraph server process owns the graph and its execution resources. Seeing a proposed tool call in the terminal does not mean the terminal itself executed it.</p><p>The client talks to the server over HTTP (Hypertext Transfer Protocol) and receives incremental events through SSE (Server-Sent Events). MCP (Model Context Protocol) sessions connect external tools and belong to the server's event loop. These ownership boundaries explain both configuration delivery and cleanup.</p><h3>Interactive process lifecycle</h3><ol class=\"explain-steps\"><li><strong>Dispatch the requested execution surface.</strong> The console scripts resolve to <code>deepagents_code:cli_main</code>. The substantial dispatcher in <code>main.py</code> distinguishes subcommands, ACP (Agent Client Protocol) stdio serving, one-shot non-interactive execution, and interactive Textual execution. These are different policy surfaces, not cosmetic output modes.</li><li><strong>Launch the terminal with server arguments.</strong> For the normal interactive path, <code>run_textual_cli_async</code> constructs server arguments and launches <code>run_textual_app</code> with <code>backend=None</code> and those arguments.</li><li><strong>Construct the graph in the server process.</strong> The server's <code>server_graph</code> entry point reads the shared <code>ServerConfig</code> schema that the parent serializes.</li><li><strong>Carry settings across the boundary.</strong> Changing an in-memory variable in the Textual process does not automatically change the graph; the setting must cross the configuration or run-context boundary.</li><li><strong>Report startup failures from the owner.</strong> A terminal-rendering error, HTTP/SSE transport failure, provider error, and tool execution error occur in different owners. Server startup emits a machine-readable startup-error marker alongside stderr text.</li><li><strong>Clean up on the owning event loop.</strong> MCP sessions are bound to the server event loop, so cleanup cannot safely be replaced by an arbitrary late <code>atexit</code> coroutine.</li></ol><details><summary>Import-time detail: lazy package attributes</summary><p>Package-level lazy attribute access avoids eagerly importing startup machinery merely to import <code>deepagents_code</code>. This improves the import boundary; it does not change which process owns the graph after launch.</p></details><aside class=\"callout\"><p>Ask “which process owned this resource?” before “which widget displayed the error?”</p></aside>",
+        "sources": [
+          {
+            "path": "libs/code/deepagents_code/__init__.py",
+            "start": 26,
+            "end": 29,
+            "label": "Lazy startup import"
+          },
+          {
+            "path": "libs/code/deepagents_code/main.py",
+            "start": 5463,
+            "end": 5504,
+            "label": "CLI entry and dependency gate"
+          },
+          {
+            "path": "libs/code/deepagents_code/main.py",
+            "start": 3532,
+            "end": 3579,
+            "label": "Textual launch forwards server configuration"
+          },
+          {
+            "path": "libs/code/deepagents_code/server_graph.py",
+            "start": 1,
+            "end": 10,
+            "label": "Server graph factory configuration contract"
+          },
+          {
+            "path": "libs/code/deepagents_code/server_graph.py",
+            "start": 154,
+            "end": 181,
+            "label": "Startup diagnostics and loop-owned MCP manager"
+          }
+        ]
+      },
+      {
+        "id": "code-runtime-assembly",
+        "title": "create_cli_agent is application composition, not the SDK factory",
+        "body": "<p>The SDK factory supplies reusable agent behavior. <code>create_cli_agent</code> wraps that factory with Code's application choices and returns a pair: the compiled agent and the composite backend. HITL means <strong>human-in-the-loop</strong>: execution can pause for a review decision before a protected tool action runs.</p><ol class=\"explain-steps\"><li><strong>Assemble the application environment.</strong> It creates the environment around <code>create_deep_agent</code>: instructions, custom subagents, model retry policy, Git tracing, memory/skills, local context, approvals, hooks, compaction, and optionally rubric, extensions, or interpreter machinery. The final SDK call receives the assembled tools, middleware, backend, CLI context schema, checkpointer, store, and subagent specs.</li><li><strong>Create the editable profile when needed.</strong> Memory and skills can cause the named agent directory to be created, with an initially empty <code>AGENTS.md</code> marker. This distinguishes the user-editable profile from base coding instructions generated by the application. Memory sources include the user profile instruction file plus discovered project instruction paths.</li><li><strong>Keep loading separate from auto-saving.</strong> When automatic memory saving is disabled, loading remains enabled but the injected prompt changes; “do not auto-save memory” does not mean “ignore existing instructions.” A guard protects the machine-managed onboarding-name block from agent file edits.</li><li><strong>Apply child-graph middleware deliberately.</strong> Application middleware is attached to child graphs as well, including server hooks, retry handling, and applicable memory protection.</li><li><strong>Install only one approval wrapper.</strong> When application-owned HITL middleware is installed, subagent specs receive an explicit empty <code>interrupt_on</code> map so the SDK does not also inherit and install stock HITL. Two independent approval wrappers could otherwise interrupt the same action twice. Middleware identity and assembly order are behavioral contracts.</li></ol>",
+        "sources": [
+          {
+            "path": "libs/code/deepagents_code/agent.py",
+            "start": 2837,
+            "end": 2854,
+            "label": "Profile and skill initialization"
+          },
+          {
+            "path": "libs/code/deepagents_code/agent.py",
+            "start": 2896,
+            "end": 2953,
+            "label": "Subagent middleware composition"
+          },
+          {
+            "path": "libs/code/deepagents_code/agent.py",
+            "start": 3044,
+            "end": 3052,
+            "label": "Prevent duplicate child HITL"
+          },
+          {
+            "path": "libs/code/deepagents_code/agent.py",
+            "start": 3134,
+            "end": 3185,
+            "label": "Memory and skills wiring"
+          },
+          {
+            "path": "libs/code/deepagents_code/agent.py",
+            "start": 3742,
+            "end": 3767,
+            "label": "Final SDK composition and returned pair"
+          }
+        ]
+      },
+      {
+        "id": "code-runtime-backends",
+        "title": "One tool name can cross very different execution boundaries",
+        "body": "<p>Code selects a default execution backend, then adds storage-specific routes. Read the two decisions separately.</p><ol class=\"explain-steps\"><li><strong>Choose local shell semantics.</strong> With no remote sandbox, Code uses the effective launch directory as its root. Shell-enabled mode chooses <code>LocalShellBackend</code> with <code>virtual_mode=False</code>. The supplied shell environment is already curated, so <code>inherit_env=False</code> avoids reintroducing carrier variables or agent-only tracing credentials.</li><li><strong>Choose filesystem-only or remote execution.</strong> Without shell access it uses a plain <code>FilesystemBackend</code>. With a remote sandbox it uses the supplied sandbox backend for file and execution operations instead.</li><li><strong>Wrap dedicated persistent routes.</strong> The default backend is wrapped in <code>CompositeBackend</code>. Local conversation history gets dedicated persistent routing. Large tool results normally use the hardened artifact root, with explicit fallback storage and aliases when that predictable directory is unavailable.</li><li><strong>Keep earlier offload paths resolvable.</strong> Those aliases remain resolvable so a checkpoint containing an earlier offload path is not invalidated by later recovery.</li><li><strong>Validate extension-owned paths.</strong> Extension backend routes are validated against protected paths before being merged.</li><li><strong>Debug the selected route.</strong> To debug a missing file, identify its route first: repository file, persistent conversation archive, large-result offload, or extension-owned path. Looking only in the current working directory can be the wrong investigation.</li></ol><aside class=\"callout\"><p><strong>A local root is not a process security sandbox.</strong> This application intentionally gives real host-path semantics to local tools. Tool approval, environment preparation, filesystem routing, and remote isolation solve different problems.</p><p>A model instruction saying “work only in this directory” is not equivalent to an operating-system access boundary.</p></aside>",
+        "sources": [
+          {
+            "path": "libs/code/deepagents_code/agent.py",
+            "start": 3187,
+            "end": 3224,
+            "label": "Local versus remote execution backend"
+          },
+          {
+            "path": "libs/code/deepagents_code/agent.py",
+            "start": 3310,
+            "end": 3379,
+            "label": "Artifact routing, fallback aliases, and extension protection"
+          }
+        ]
+      },
+      {
+        "id": "code-runtime-streaming",
+        "title": "Tokens, tool events, and interrupts are different stream data",
+        "body": "<p>The terminal-side <code>RemoteAgent</code> wraps LangGraph's <code>RemoteGraph</code> over HTTP (Hypertext Transfer Protocol) and SSE (Server-Sent Events). Its <code>astream</code> interface yields <code>(namespace, stream_mode, data)</code>: where the event came from, what kind it is, and its payload.</p><ol class=\"explain-steps\"><li><strong>Prepare a remote run.</strong> It requires a thread ID, prepares mutation ownership, adds the resolved workspace to runtime context, and delegates SSE parsing and namespace negotiation to the upstream client.</li><li><strong>Preserve event types.</strong> Message dictionaries are converted back to LangChain message objects; update events remain structurally distinct. That separation lets a client render incremental text without confusing it with completed graph state. A token chunk is not proof that a write happened. An <code>updates</code> event carrying an interrupt is not a tool result.</li><li><strong>Keep child execution and interrupts distinct.</strong> Subgraph namespaces identify child execution, so they must not be flattened indiscriminately into the main assistant answer. The non-interactive stream accumulator likewise separates pending tool-approval interrupts, resume decisions, and hook interrupts.</li></ol><h3>Illustrative report-edit lifecycle</h3><p>Suppose a thread has read <code>/notes/brief.txt</code> and an existing draft is at <code>/notes/report.txt</code>. The following is an implementation-derived example, not a recorded model run.</p><ol class=\"explain-steps\"><li><strong>Start the run.</strong> The user asks to revise the report from the brief.</li><li><strong>Propose the edit.</strong> Model messages produce an <code>edit_file</code> call targeting the report; this is intent, not a completed write.</li><li><strong>Suspend when required.</strong> Hooks and approval routing may pause the graph before the edit executes.</li><li><strong>Return the review decision.</strong> The client sends a resume decision for the interrupted action.</li><li><strong>Execute and observe.</strong> Only then can the backend edit execute and return a tool message.</li><li><strong>Explain the result.</strong> A later model message explains the result; inspect the actual file when confirming the effect.</li></ol><aside class=\"callout\"><p>When a UI looks stuck, distinguish waiting for approval, waiting for a hook response, waiting on the model, and waiting on the execution backend.</p></aside>",
+        "sources": [
+          {
+            "path": "libs/code/deepagents_code/client/remote_client.py",
+            "start": 837,
+            "end": 938,
+            "label": "Remote stream transformation"
+          },
+          {
+            "path": "libs/code/deepagents_code/client/non_interactive.py",
+            "start": 426,
+            "end": 502,
+            "label": "Independent streamed interrupt state"
+          },
+          {
+            "path": "libs/code/deepagents_code/agent.py",
+            "start": 3420,
+            "end": 3436,
+            "label": "Hooks wrap tool failures after approval composition"
+          }
+        ]
+      },
+      {
+        "id": "code-runtime-sessions",
+        "title": "A session is more than the currently visible transcript",
+        "body": "<p>A session connects three things that must not be confused: discovery metadata, resumable graph state, and external effects. Metadata helps find the right thread and workspace. Checkpoints hold graph state. A write performed by a local or remote backend changes that backend's filesystem, not merely the transcript.</p><ul><li><strong>Session storage:</strong> Code locates a hardened state directory and <code>sessions.db</code>; generated thread IDs are full UUID7 strings. This database is not just a list of session names: the local SQLite saver also stores checkpoint state blobs alongside checkpoint metadata. Thread-list queries can read the smaller metadata without loading every state blob.</li><li><strong>Connected graph state:</strong> the interactive application and remote graph carry checkpointed state, workspace identity, and ownership. A locally seeded remote handoff is a discovery snapshot, not permission to replace the connected server's checkpoints; subsequent history loads from the connected agent.</li><li><strong>Actual files:</strong> a saved checkpoint does not roll back a completed backend write. Nor does a proposed tool call prove that the write occurred.</li></ul><h3>Illustrative resume after a disconnected display</h3><ol class=\"explain-steps\"><li><strong>Before disconnection:</strong> the thread reads <code>/notes/brief.txt</code> and starts producing <code>/notes/report.txt</code>. The terminal disconnects before displaying a final result.</li><li><strong>On resume:</strong> reattach to the same execution context and workspace, rather than replaying the plain text log into a fresh model.</li><li><strong>Before repeating the write:</strong> inspect checkpoint state and the actual report file. It may already exist even though the terminal never showed completion; alternatively, the action may still have been awaiting approval.</li></ol><h3>Recovery must coordinate with the server</h3><ol class=\"explain-steps\"><li><strong>Cancel before recovery mutation.</strong> Transport cancellation does not imply the remote run stopped. <code>RemoteAgent</code> cancels pending/running runs before recovery writes; state updates handle a busy-thread conflict by cancelling and retrying once.</li><li><strong>Bound concurrent cancellation waits.</strong> Per-run cancellation waits are bounded and concurrent. Escape should not become indefinitely blocked cleanup, but shutdown and an already running side effect can still race.</li><li><strong>Inspect durable effects after interruption.</strong> Check files and checkpoint state rather than automatically reissuing a write or treating an unfinished stream event as success.</li></ol>",
+        "sources": [
+          {
+            "path": "libs/code/deepagents_code/sessions.py",
+            "start": 352,
+            "end": 382,
+            "label": "Session database and UUID7 identifiers"
+          },
+          {
+            "path": "libs/code/deepagents_code/client/remote_client.py",
+            "start": 1015,
+            "end": 1046,
+            "label": "Cancel remote runs before state recovery"
+          },
+          {
+            "path": "libs/code/deepagents_code/client/remote_client.py",
+            "start": 1078,
+            "end": 1095,
+            "label": "Busy-thread state update recovery"
+          },
+          {
+            "path": "libs/code/deepagents_code/client/remote_client.py",
+            "start": 1473,
+            "end": 1495,
+            "label": "Bounded concurrent run cancellation"
+          },
+          {
+            "path": "libs/code/deepagents_code/sessions.py",
+            "start": 396,
+            "end": 409,
+            "label": "Checkpoint blobs and discovery metadata share SQLite storage"
+          },
+          {
+            "path": "libs/code/deepagents_code/sessions.py",
+            "start": 2050,
+            "end": 2079,
+            "label": "Owned local saver and remote discovery snapshot boundary"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "code-control",
+    "group": "Applications",
+    "title": "Code configuration, trust, and automation",
+    "kicker": "Control plane versus model-visible state",
+    "summary": "Learn how ranked configuration, model policy, approval modes, MCP, hooks, skills, extensions, and one-shot execution combine without collapsing their security boundaries.",
+    "readingMinutes": 16,
+    "sections": [
+      {
+        "id": "code-control-configuration",
+        "title": "Configuration is ranked data with provenance",
+        "body": "<p>Configuration resolution answers two questions: “which value wins?” and “why?” Code gives each provider a numeric rank; lower numbers are stronger. A managed policy can therefore override a command-line flag rather than acting only as a fallback.</p><h3>Resolve a concrete conflict first</h3><p>Illustrative scalar-resolution example: assume all candidates parse successfully and use <code>managed-model</code>, <code>cli-model</code>, <code>env-model</code>, and <code>fallback-model</code> as teaching labels, not executable model IDs. The same field is supplied at four ranks:</p><div class=\"table-wrap\"><table><thead><tr><th>Source</th><th>Candidate</th><th>Result</th></tr></thead><tbody><tr><td>Managed policy, 200</td><td>managed-model</td><td>Selected.</td></tr><tr><td>CLI, 300</td><td>cli-model</td><td>Masked by managed policy.</td></tr><tr><td>Environment, 400</td><td>env-model</td><td>Masked by stronger sources.</td></tr><tr><td>Default, 1000</td><td>fallback-model</td><td>Not selected.</td></tr></tbody></table></div><p>Remove the managed value and the CLI candidate wins. Remove that too and, with no retained reload or user-TOML candidate, the environment wins. With none of those sources set, the default wins. This example explains precedence; it does not claim any particular model is a shipped default.</p><h3>The complete resolution contract</h3><ol class=\"explain-steps\"><li><strong>Apply all ranked sources.</strong> The full order is managed policy <code>200</code>, CLI <code>300</code>, retained reload values <code>350</code>, environment <code>400</code>, user TOML <code>500</code>, defaults <code>1000</code>. Runtime-reload retention is a named tier, not an undocumented environment mutation.</li><li><strong>Represent source outcomes explicitly.</strong> The resolver is independent of filesystem, model, UI, and manifest details. Providers return typed <code>Found</code>, <code>Unset</code>, or <code>Invalid</code> results: a candidate, an absent value, or a value that could not be accepted. Absence and invalid input are not interchangeable.</li><li><strong>Preserve the explanation.</strong> A resolved value retains rank-keyed provenance, provider health, diagnostics, selected ranks, and masked ranks. Its constructor rejects inconsistent provenance and freezes copied mappings. A configuration viewer must explain overridden or unhealthy sources as well as the chosen scalar.</li><li><strong>Constrain environment loading separately.</strong> Project dotenv is untrusted; the configuration module denies selected keys and can bind an immutable construction-scoped environment using a ContextVar. The shell backend receives an explicit prepared copy rather than blindly inheriting the server environment.</li></ol><aside class=\"callout\"><p>If a change seems ignored, distinguish precedence, parsing failure, retained reload values, construction snapshots, and the child-process serialization boundary before editing random environment variables.</p></aside>",
+        "sources": [
+          {
+            "path": "libs/code/deepagents_code/configuration/resolver.py",
+            "start": 1,
+            "end": 7,
+            "label": "Pure typed resolution boundary"
+          },
+          {
+            "path": "libs/code/deepagents_code/configuration/resolver.py",
+            "start": 32,
+            "end": 48,
+            "label": "Actual provider ranks"
+          },
+          {
+            "path": "libs/code/deepagents_code/configuration/resolver.py",
+            "start": 64,
+            "end": 121,
+            "label": "Provenance and health invariants"
+          },
+          {
+            "path": "libs/code/deepagents_code/config.py",
+            "start": 349,
+            "end": 370,
+            "label": "Project dotenv denial handling"
+          },
+          {
+            "path": "libs/code/deepagents_code/config.py",
+            "start": 541,
+            "end": 577,
+            "label": "Scoped environment binding"
+          },
+          {
+            "path": "libs/code/deepagents_code/agent.py",
+            "start": 3195,
+            "end": 3215,
+            "label": "Prepared shell environment"
+          }
+        ]
+      },
+      {
+        "id": "code-control-models",
+        "title": "Model selection includes authorization and retry ownership",
+        "body": "<p><code>create_model</code> supports explicit <code>provider:model</code> strings, inferred bare names, and configured custom model classes.</p><ol class=\"explain-steps\"><li><strong>Parse without misreading provider identifiers.</strong> The parser first accounts for configured provider names and Bedrock identifiers that themselves contain a version colon.</li><li><strong>Gate the canonical model before side effects.</strong> It then computes a canonical spec and calls <code>require_model_allowed</code> <em>before</em> stored credentials are bridged, provider profiles are applied, or provider modules are imported. A model allowlist is therefore an execution-policy gate, not just a UI filter.</li><li><strong>Resolve credentials with provider-specific rules.</strong> Next come credential resolution and an early missing-credential error for providers where that check is meaningful. Implicit-auth providers are handled differently because absence of an API-key variable does not establish absence of credentials.</li><li><strong>Compose parameters and return metadata.</strong> Provider defaults/profile data, configured kwargs, and explicit model parameters are composed under application policy. The result contains both the model and metadata used by the application, rather than just a string label.</li><li><strong>Keep retry ownership at the model node.</strong> Retry ownership is particularly important for latency and billing. Code's factory documents that identifiable provider-owned retry counts are forced off after parameter merging because model-node middleware owns the retry budget. Otherwise a nominal three-attempt application loop could multiply into many hidden SDK attempts.</li></ol><aside class=\"callout\"><p>Unidentifiable custom providers are explicitly a caveat, not magically governed by the same guarantee. When debugging slow failures, inspect both the application retry setting and the actual provider integration.</p></aside>",
+        "sources": [
+          {
+            "path": "libs/code/deepagents_code/config.py",
+            "start": 6937,
+            "end": 6999,
+            "label": "Model API and retry contract"
+          },
+          {
+            "path": "libs/code/deepagents_code/config.py",
+            "start": 7022,
+            "end": 7073,
+            "label": "Canonical model selection and policy ordering"
+          },
+          {
+            "path": "libs/code/deepagents_code/config.py",
+            "start": 7075,
+            "end": 7137,
+            "label": "Credentials and provider profile composition"
+          }
+        ]
+      },
+      {
+        "id": "code-control-approval",
+        "title": "Manual, Auto, and YOLO are distinct authorization policies",
+        "body": "<p>Approval modes decide whether a proposed action needs review before execution. HITL means <strong>human-in-the-loop</strong>: the graph pauses and waits for a decision. The interactive modes are <code>manual</code>, <code>auto</code>, and <code>yolo</code>; unknown values normalize to Manual.</p><h3>Start with what each mode does</h3><ul><li><strong>Manual:</strong> side-effecting or externally accessing tools are configured for review: execution, writes, edits, deletion, web access, delegation, and relevant MCP (Model Context Protocol) actions. Each review configuration has a runtime predicate, so trusted run-scoped “approve always” state can suppress the interrupt itself.</li><li><strong>Auto:</strong> a specialized HITL replacement evaluates eligible actions using a trusted worktree root, narrow shell allowlist, classifier settings, and trusted tool identities. Auto can deny actions; the classifier validates batch index coverage before binding verdicts to original tool-call IDs.</li><li><strong>YOLO:</strong> the resolved YOLO mode makes the ordinary tool-review predicate return <code>False</code>, so it does not pause for that approval. The construction-level <code>auto_approve</code> option likewise documents automatic shell execution, file writes/edits, web search, and URL fetch. This is approval bypass, not filesystem isolation or a promise that another hook, tool, or provider cannot fail.</li></ul><p>Illustrative report write: in Manual, a gated <code>write_file</code> proposal can wait for a person; in Auto, the specialized policy evaluates it; in YOLO, the ordinary approval pause is skipped. None of these choices alone proves <code>/notes/report.txt</code> was written.</p><h3>Selection and nested-graph rules</h3><ul><li><strong>Expose only eligible modes.</strong> The switcher omits Auto when the runtime is ineligible, such as a remote sandbox, and omits YOLO when configured out of the cycle. Leaving an already active YOLO mode remains possible.</li><li><strong>Separate acknowledgement from display.</strong> Warning suppression is cosmetic. Versioned YOLO acknowledgement is tracked separately.</li><li><strong>Install one approval wrapper per graph.</strong> Code prevents children from inheriting a second HITL wrapper. Subagent approval and interpreter bridges require deliberate assembly, not duplicate interrupts.</li></ul><aside class=\"callout\"><p>PTC means <strong>programmatic tool calling</strong>: interpreter code calls host tools through <code>tools.*</code>. Those calls bypass normal per-tool parent HITL routing. The interpreter's PTC allowlist is a capability boundary, not an optimization toggle. Gating ordinary <code>execute</code> does not necessarily gate the same capability exposed through a bridge.</p></aside>",
+        "sources": [
+          {
+            "path": "libs/code/deepagents_code/approval_mode.py",
+            "start": 26,
+            "end": 37,
+            "label": "Warning acknowledgement versus cosmetic suppression"
+          },
+          {
+            "path": "libs/code/deepagents_code/approval_mode.py",
+            "start": 48,
+            "end": 114,
+            "label": "Mode validation and cycle"
+          },
+          {
+            "path": "libs/code/deepagents_code/agent.py",
+            "start": 2288,
+            "end": 2370,
+            "label": "Per-tool review construction"
+          },
+          {
+            "path": "libs/code/deepagents_code/agent.py",
+            "start": 3387,
+            "end": 3418,
+            "label": "Auto replaces rather than duplicates HITL"
+          },
+          {
+            "path": "libs/code/deepagents_code/auto_mode.py",
+            "start": 287,
+            "end": 379,
+            "label": "Typed classifier verdicts and ID binding"
+          },
+          {
+            "path": "libs/code/deepagents_code/agent.py",
+            "start": 2672,
+            "end": 2676,
+            "label": "Interpreter PTC bypass boundary"
+          },
+          {
+            "path": "libs/code/deepagents_code/agent.py",
+            "start": 2154,
+            "end": 2189,
+            "label": "Resolved YOLO bypasses the ordinary approval interrupt"
+          },
+          {
+            "path": "libs/code/deepagents_code/agent.py",
+            "start": 2616,
+            "end": 2618,
+            "label": "Construction-level automatic tool approval"
+          }
+        ]
+      },
+      {
+        "id": "code-control-extensibility",
+        "title": "MCP, hooks, skills, and extensions cross different trust boundaries",
+        "body": "<p>These extension surfaces grant different kinds of authority. MCP means <strong>Model Context Protocol</strong>, a protocol for connecting external tools. Read the surfaces as a capability comparison, not as interchangeable plugin mechanisms.</p><h3>Tools and event automation</h3><ul><li><strong>MCP adds externally implemented tools.</strong> The CLI merges discovered configurations with an explicit highest-precedence path, and can disable MCP entirely.</li><li><strong>Local and remote MCP definitions both require trust.</strong> A remote URL or interpolated header can enable SSRF (server-side request forgery) or credential exfiltration even without launching a subprocess. Remembered trust is associated with project and unchanged server definitions; persistent denied names have broader scope. Project trust is not just “is this executable safe?”</li><li><strong>Hooks are event-driven local automation.</strong> Server middleware emits PreCompact, PreToolUse, PostToolUse, PostToolUseFailure, Stop, SubagentStart, and SubagentStop through interrupts for a client runtime to execute and return typed decisions.</li><li><strong>Hook trust and approval are separate.</strong> Project hook handlers can run arbitrary shell commands, so trust is explicit. Hook control flow and ordinary approval interrupts coexist; an unattended runner must resolve the correct kind, not blindly approve every interrupt-shaped payload.</li></ul><h3>Instructional content and host Python</h3><ul><li><strong>Skills supply instructions and optional associated tooling.</strong> The command loader merges built-in, plugin, user profile, user <code>.agents</code>, project <code>.deepagents</code>, project <code>.agents</code>, and experimental Claude sources in ascending precedence.</li><li><strong>Skill discovery has bounded failure and read scope.</strong> Higher-precedence names replace lower ones; one inaccessible source is logged without blocking all discovery. Full-content reads can enforce allowed resolved roots. Skill text is not tool authorization.</li><li><strong>Extensions execute Python in the host application.</strong> The loader imports a module, requires a callable asynchronous <code>extension</code> factory, snapshots registrations, and rolls them back if initialization fails or is cancelled.</li><li><strong>Registration rollback is not host rollback.</strong> Arbitrary Python import side effects are not undone. Backend route validation protects app-owned storage names, but trusted Python can still perform host operations. This is a stronger trust grant than reading a Markdown skill.</li></ul>",
+        "sources": [
+          {
+            "path": "libs/code/deepagents_code/main.py",
+            "start": 2881,
+            "end": 2907,
+            "label": "MCP and hook trust CLI switches"
+          },
+          {
+            "path": "libs/code/deepagents_code/main.py",
+            "start": 4779,
+            "end": 4800,
+            "label": "Remote and stdio MCP trust threat model"
+          },
+          {
+            "path": "libs/code/deepagents_code/main.py",
+            "start": 5059,
+            "end": 5070,
+            "label": "Project hooks execute local commands"
+          },
+          {
+            "path": "libs/code/deepagents_code/hooks/server_middleware.py",
+            "start": 1,
+            "end": 5,
+            "label": "Hook interrupt transport"
+          },
+          {
+            "path": "libs/code/deepagents_code/skills/load.py",
+            "start": 64,
+            "end": 105,
+            "label": "Skill source precedence"
+          },
+          {
+            "path": "libs/code/deepagents_code/skills/load.py",
+            "start": 114,
+            "end": 163,
+            "label": "Namespaced loading and per-source failures"
+          },
+          {
+            "path": "libs/code/deepagents_code/skills/load.py",
+            "start": 166,
+            "end": 189,
+            "label": "Resolved skill-root containment contract"
+          },
+          {
+            "path": "libs/code/deepagents_code/extensions/loader.py",
+            "start": 27,
+            "end": 110,
+            "label": "Python import and transactional registration"
+          }
+        ]
+      },
+      {
+        "id": "code-control-headless",
+        "title": "Headless execution is not interactive Auto without a screen",
+        "body": "<p>Headless execution has no person at a terminal to resolve arbitrary approval prompts. The one-shot runner therefore derives a separate shell policy; interactive Auto/YOLO flags do not turn it into “Auto without a screen.” HITL means human-in-the-loop review, and MCP means Model Context Protocol external-tool integration.</p><h3>Choose the shell capability explicitly</h3><ul><li><strong>No commands:</strong> an empty or absent allowlist disables shell access.</li><li><strong>Named commands:</strong> a restrictive list such as <code>[\"cat\", \"grep\"]</code> checks command names and dangerous shell patterns.</li><li><strong>Unrestricted:</strong> <code>--shell-allow-list=all</code> parses to the special <code>SHELL_ALLOW_ALL</code> sentinel. A sentinel is a distinguished value with its own type, not an executable named “all.” It bypasses the restrictive pattern/token checks for nonempty commands.</li></ul><h3>Illustrative restrictive-policy decisions</h3><p>With only <code>cat</code> and <code>grep</code> allowed, <code>cat /notes/brief.txt</code> passes the shell matcher. <code>rm /notes/report.txt</code> fails because <code>rm</code> is not listed. <code>cat /notes/brief.txt &gt; /notes/report.txt</code> fails the dangerous-pattern check even though its first command is allowed.</p><p>A pipeline also needs every command segment allowed: <code>cat /notes/brief.txt | grep summary</code> can pass, while adding an unlisted <code>wc</code> cannot. These are source-derived policy examples, not executed commands or a full operating-system sandbox.</p><aside class=\"callout\"><p><strong>Shell matching is not read-only mode.</strong> Without configured permission hooks, exposed non-shell tools ordinarily run without human approval. Rejecting shell redirection does not prevent an exposed <code>write_file</code> from writing <code>/notes/report.txt</code>, subject to that tool's own permissions and backend. Shell matching, filesystem-tool exposure, permission hooks, and the headless MCP guard are separate controls.</p></aside><h3>One-shot execution and machine outcomes</h3><ol class=\"explain-steps\"><li><strong>Resolve execution settings.</strong> They come from the shell policy, not the interactive switch. Permission hooks can change how the interrupt path is configured.</li><li><strong>Apply headless gates.</strong> The CLI warns that explicit interactive Auto/YOLO flags have no effect here. Shell access follows <code>--shell-allow-list</code>; MCP routing is fail-closed, including a headless guard for gated MCP tool names.</li><li><strong>Interpret the exit.</strong> The runner returns <code>130</code> for interruption, <code>124</code> for the bounded HITL/turn-budget failure path, <code>1</code> for execution/resume failures, and <code>0</code> on ordinary completion or deliberate client-hook stop.</li><li><strong>Check the artifact.</strong> Zero exit does not universally prove the user's business objective. Combine status with the requested artifact or explicit acceptance checks.</li></ol><details><summary>GitHub action wrapper: arguments, timeout, and untrusted output</summary><p>The composite action builds an argument array, validates JSON and Boolean inputs, runs <code>dcode --non-interactive</code> or a stdin path under an outer timeout, and captures the first pipeline stage's status rather than <code>tee</code>'s. It uses a random delimiter when writing untrusted model output to GitHub outputs and rejects stdin plus skill in its own wrapper.</p></details><aside class=\"callout\"><p>Workflow permissions, secrets, shell allowlist, project trust, and memory-cache scope remain operator decisions. The action does not make repository content trusted instructions.</p></aside>",
+        "sources": [
+          {
+            "path": "libs/code/deepagents_code/client/non_interactive.py",
+            "start": 3017,
+            "end": 3060,
+            "label": "Headless shell and hook policy"
+          },
+          {
+            "path": "libs/code/deepagents_code/agent.py",
+            "start": 2855,
+            "end": 2881,
+            "label": "Shell-only mode omits ordinary tool HITL"
+          },
+          {
+            "path": "libs/code/deepagents_code/client/non_interactive.py",
+            "start": 1745,
+            "end": 1819,
+            "label": "Shell decisions and non-shell approval fallback"
+          },
+          {
+            "path": "libs/code/deepagents_code/main.py",
+            "start": 5884,
+            "end": 5912,
+            "label": "Interactive approval flags are ignored headlessly"
+          },
+          {
+            "path": "libs/code/deepagents_code/agent.py",
+            "start": 3093,
+            "end": 3100,
+            "label": "Fail-closed headless MCP guard"
+          },
+          {
+            "path": "libs/code/deepagents_code/client/non_interactive.py",
+            "start": 3178,
+            "end": 3222,
+            "label": "Actual one-shot exit paths"
+          },
+          {
+            "path": "action.yml",
+            "start": 412,
+            "end": 449,
+            "label": "Action arguments remain array elements"
+          },
+          {
+            "path": "action.yml",
+            "start": 459,
+            "end": 527,
+            "label": "Timeout, pipeline status, and safe output framing"
+          },
+          {
+            "path": "libs/code/deepagents_code/config.py",
+            "start": 2925,
+            "end": 2963,
+            "label": "Typed unrestricted sentinel and all parser value"
+          },
+          {
+            "path": "libs/code/deepagents_code/config.py",
+            "start": 4421,
+            "end": 4486,
+            "label": "Restrictive shell matching and dangerous-pattern rejection"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "talon-runtime",
+    "group": "Applications",
+    "title": "Talon: a long-running channel host",
+    "kicker": "Events, authority, history, and scheduled work",
+    "summary": "Follow chat messages and scheduled prompts through a host that owns channel lifetimes, conversation replacement, protected approvals, background results, and multiple persistence layers.",
+    "readingMinutes": 19,
+    "sections": [
+      {
+        "id": "talon-runtime-boot",
+        "title": "The process host and the agent graph are separate owners",
+        "body": "<p>Talon keeps an agent available across channel events instead of launching a new terminal for each message. The <strong>host</strong> owns chat connections and scheduled delivery; the <strong>runtime</strong> invokes the agent graph. Talon is explicitly experimental, so those useful boundaries should not be mistaken for a production-service guarantee.</p><h3>Model-backed startup</h3><ol class=\"explain-steps\"><li><strong>Select adapters and prepare local state.</strong> The executable reads <code>TalonConfig</code>, prepares assistant-local state and cron storage, constructs enabled WhatsApp, Telegram, Discord, and Slack adapters, and enters the host. Channel flags and corresponding environment switches select adapters.</li><li><strong>Open execution and persistence resources.</strong> The model-backed path opens an optional sandbox, then the configured checkpointer and independent history archive. It wraps the stores in <code>ConversationSaver</code>, loads MCP (Model Context Protocol) tools, and constructs <code>DeepAgentRuntime</code>.</li><li><strong>Compose the graph directly with the SDK.</strong> It calls <code>create_deep_agent</code>, adding filesystem handling with binary offload outside StateBackend, selected-model summarization, model selection, progress messages, HITL (human-in-the-loop review), server hooks, task selection, background middleware, skills, memory, and the checkpointer.</li><li><strong>Enter the host lifecycle.</strong> The host manages channel and scheduler lifetimes while the runtime owns invocation. Without a channel, the default assembly does not create the channel-delivery scheduler.</li></ol><details><summary>No-model startup and lifecycle-only runs</summary><p>When no model is configured, <code>_agent_runtime</code> returns <code>EchoAgentRuntime</code>. Do not infer “always runs an LLM” from the stale main-function docstring. A run-once start/stop exercises component lifecycle, not a successful real channel conversation.</p></details><aside class=\"callout\"><p>This is a local runtime host, not a distributed task queue or hosted Fleet service.</p></aside>",
+        "sources": [
+          {
+            "path": "libs/talon/deepagents_talon/__main__.py",
+            "start": 72,
+            "end": 133,
+            "label": "Startup and channel selection"
+          },
+          {
+            "path": "libs/talon/deepagents_talon/__main__.py",
+            "start": 296,
+            "end": 356,
+            "label": "Host, sandbox, archive, and scheduler wiring"
+          },
+          {
+            "path": "libs/talon/deepagents_talon/__main__.py",
+            "start": 359,
+            "end": 394,
+            "label": "Echo versus model-backed runtime"
+          },
+          {
+            "path": "libs/talon/deepagents_talon/__main__.py",
+            "start": 412,
+            "end": 429,
+            "label": "Four channel adapter families"
+          },
+          {
+            "path": "libs/talon/deepagents_talon/runtime.py",
+            "start": 494,
+            "end": 550,
+            "label": "Talon-specific graph composition"
+          }
+        ]
+      },
+      {
+        "id": "talon-runtime-message",
+        "title": "An end-to-end message trace: chat identity to delivered reply",
+        "body": "<p>Consider an illustrative authorized Slack request: “read <code>/notes/brief.txt</code> and produce <code>/notes/report.txt</code>.” Talon must keep both the conversation's identity and the current reply's ownership straight. It uses two counters with different jobs, not one generic “generation.”</p><ul><li><strong>Conversation-reset generation:</strong> a persisted counter maps a channel conversation root to the current agent thread. Starting a new conversation changes this mapping so later messages use a different graph thread.</li><li><strong>Active-turn generation:</strong> an in-process counter identifies which asynchronous turn may still deliver a reply. Replacing active work invalidates older results without, by itself, resetting the conversation's checkpoint identity.</li></ul><h3>Message-to-result lifecycle</h3><ol class=\"explain-steps\"><li><strong>Normalize and dispatch.</strong> The adapter converts the provider event into a <code>ChannelMessage</code> and dispatches through its handler.</li><li><strong>Resolve and serialize routing.</strong> Provider identity plus channel conversation ID becomes a conversation root. A history-scope lock and a conversation lock serialize routing decisions.</li><li><strong>Intercept control messages.</strong> Commands, pending tool approvals, and pending authorization callbacks are handled before ordinary text reaches the agent.</li><li><strong>Select the graph thread.</strong> The root plus the persisted conversation-reset generation resolves the agent conversation ID.</li><li><strong>Replace active work safely.</strong> An already running turn is cancelled and repaired. If cancellation times out, the host refuses overlapping work and sends its cancellation-timeout message.</li><li><strong>Assign active-turn ownership.</strong> The host increments the active-turn generation and launches a named task with model/effort selections and route metadata.</li><li><strong>Bind trusted callbacks.</strong> Progress delivery, approval, and OAuth (authorization) handlers are supplied separately from inbound metadata. A typing refresh task runs alongside the turn.</li><li><strong>Settle and deliver.</strong> After an <code>AgentResult</code>, the host stops typing, clears authorization state, verifies both current thread identity and active-turn generation, delivers the result, and records the text actually delivered.</li></ol><h3>Illustrative second-message and reset trace</h3><ol class=\"explain-steps\"><li><strong>First request:</strong> thread A has an active report-writing turn. Its reply is associated with its captured active-turn generation.</li><li><strong>Second ordinary message:</strong> “make it shorter” replaces active work, subject to cancellation succeeding. The conversation-reset mapping still selects thread A, but a newer active-turn generation owns delivery. An obsolete first reply is dropped rather than delivered late.</li><li><strong>Explicit new conversation:</strong> after cancelling old work, the host persists a bumped reset counter. The next ordinary message resolves to thread B. That changes conversation context, not just which pending reply wins.</li></ol><p>If an obsolete result consumed background results without reporting them, those results are requeued. The trace is source-derived, not a recorded channel exchange; replacing a turn also does not imply completed filesystem effects were undone.</p><aside class=\"callout\"><p>A lock protects a brief routing decision. The active-turn generation guards a result that may arrive much later; the reset generation selects the durable conversation thread. Each protects a different lifetime.</p></aside>",
+        "sources": [
+          {
+            "path": "libs/talon/deepagents_talon/channels/base.py",
+            "start": 111,
+            "end": 130,
+            "label": "Adapter-to-handler dispatch"
+          },
+          {
+            "path": "libs/talon/deepagents_talon/host.py",
+            "start": 502,
+            "end": 558,
+            "label": "Commands, approvals, and auth intercepted before invocation"
+          },
+          {
+            "path": "libs/talon/deepagents_talon/host.py",
+            "start": 897,
+            "end": 942,
+            "label": "Cancel, increment generation, launch turn"
+          },
+          {
+            "path": "libs/talon/deepagents_talon/host.py",
+            "start": 1023,
+            "end": 1133,
+            "label": "Progress, authority, typing, invocation, cleanup"
+          },
+          {
+            "path": "libs/talon/deepagents_talon/host.py",
+            "start": 1220,
+            "end": 1274,
+            "label": "Stale-result suppression and delivery recording"
+          },
+          {
+            "path": "libs/talon/deepagents_talon/host.py",
+            "start": 1522,
+            "end": 1544,
+            "label": "New conversation persists a reset counter after cancellation"
+          },
+          {
+            "path": "libs/talon/deepagents_talon/host.py",
+            "start": 1630,
+            "end": 1634,
+            "label": "Reset generation selects a distinct agent thread"
+          }
+        ]
+      },
+      {
+        "id": "talon-runtime-authority",
+        "title": "Being allowed to send a message is not approval authority",
+        "body": "<p>Shared channel exposure has three modes: <code>self</code>, <code>allowlist</code>, and <code>open</code>.</p><ol class=\"explain-steps\"><li><strong>Apply channel admission policy.</strong> Self checks the adapter's operator/self identity; allowlist matches configured conversations or mention patterns; open permits arbitrary senders only after an explicit risk acknowledgement. These are application admission controls, not identity guarantees supplied by the model.</li><li><strong>Derive approval authority from trusted configuration.</strong> Tool approval authority is narrower than admission. The host computes an operator Boolean from trusted channel configuration and passes it separately into <code>_invoke_agent</code>. That method overwrites the metadata value and forces it false for cron or background-delivery turns. Untrusted incoming metadata cannot grant itself operator status.</li><li><strong>Bind decisions to the original requester.</strong> Approval requests retain provider, chat, originating sender, action count, and prompt identity. Text replies from another sender are rejected; reaction decisions undergo additional matching before resolving the pending future.</li><li><strong>Keep OAuth outside model context.</strong> MCP OAuth is another host-owned flow. Authorization URL/device-code events are designed to bypass model context.</li><li><strong>Validate the pending callback identity.</strong> A pasted callback is intercepted before it reaches the model, checked against pending provider/chat/sender identity, checked for expiry, and parsed against the bound redirect URI. A plausible URL in an unrelated chat is not enough to complete the flow.</li><li><strong>End authorization with the owning turn.</strong> Background workers explicitly remove the authorization handler so an OAuth prompt cannot outlive the host turn that was supposed to clean it up.</li></ol><aside class=\"callout\"><p>The warning states the central risk plainly: those senders can trigger an agent operating with operator credentials and local host access.</p></aside>",
+        "sources": [
+          {
+            "path": "libs/talon/deepagents_talon/channels/base.py",
+            "start": 44,
+            "end": 108,
+            "label": "Exposure modes and admission logic"
+          },
+          {
+            "path": "libs/talon/deepagents_talon/channels/base.py",
+            "start": 193,
+            "end": 218,
+            "label": "Open-exposure acknowledgement and risk warning"
+          },
+          {
+            "path": "libs/talon/deepagents_talon/host.py",
+            "start": 1401,
+            "end": 1440,
+            "label": "Host-owned operator authority"
+          },
+          {
+            "path": "libs/talon/deepagents_talon/host.py",
+            "start": 1960,
+            "end": 1987,
+            "label": "Pending approval identity"
+          },
+          {
+            "path": "libs/talon/deepagents_talon/host.py",
+            "start": 2004,
+            "end": 2065,
+            "label": "Sender and reaction checks"
+          },
+          {
+            "path": "libs/talon/deepagents_talon/authorization.py",
+            "start": 14,
+            "end": 45,
+            "label": "Auth events stay outside model context"
+          },
+          {
+            "path": "libs/talon/deepagents_talon/host.py",
+            "start": 1835,
+            "end": 1895,
+            "label": "Bound OAuth callback interception"
+          },
+          {
+            "path": "libs/talon/deepagents_talon/background.py",
+            "start": 304,
+            "end": 312,
+            "label": "Background OAuth handler removed"
+          }
+        ]
+      },
+      {
+        "id": "talon-runtime-persistence",
+        "title": "Checkpoint, searchable history, and live jobs are different stores",
+        "body": "<p>Ask whether you want to <strong>continue execution</strong> or <strong>find past conversation evidence</strong>. A checkpoint answers the first question: it restores the graph's resumable state. A history archive answers the second: it stores conversation-oriented records and can support retrieval. Searching old messages does not itself resume the thread that produced them.</p><p>Illustratively, “continue the report we were editing” needs the right graph thread and checkpoint. “Find last month's discussion of this brief” is an archive/search task. A report file is a third concern: neither a search result nor a checkpoint alone establishes the current contents of <code>/notes/report.txt</code>.</p><h3>Storage responsibilities</h3><ul><li><strong>Checkpoints:</strong> resumable graph state.</li><li><strong>Archive:</strong> conversation records, namespaced by assistant, with optional vector retrieval.</li><li><strong>Live jobs:</strong> in-process background workers, not durable restartable executions.</li></ul><details><summary>Backend selection, archive coordination, and search visibility</summary><p>The host opens checkpoint and history backends independently. Both default to local SQLite paths, and each can select a URI scheme. Checkpoints support SQLite/file, PostgreSQL, MongoDB variants, and a scheme-specific installed entry point when exactly one matches.</p><p>Remote archive drivers and embedding providers are optional dependencies, not silently available infrastructure. <code>ConversationSaver</code> wraps the checkpointer and archive without owning either lifetime. It delegates checkpoint reads and serialization permissions, and protects active sessions against deletion through conversation tools.</p><p>Synchronous writes and administrative copy/prune paths are deliberately unsupported so they cannot bypass archival behavior. Coordination by one wrapper does not make two independent stores a database transaction.</p><p>History visibility is backend-specific. Construction marks MongoDB search visibility as unknown and other supported selections as immediate. Atlas server-side embeddings require MongoDB history. Vector-generation preparation and embedding profile setup are explicit initialization stages.</p></details><p>A missing search hit may involve archive scope, embedding generation, or index visibility rather than a missing checkpoint. Conversely, clearing visible chat context does not prove archives, vector records, media, hook transcripts, and provider caches were removed.</p><aside class=\"callout\"><p>A durable checkpoint and a persisted cron definition do not make an in-flight Python background task restartable. The worker registry is explicitly memory-only. Plan operational recovery around those separate lifetimes.</p></aside>",
+        "sources": [
+          {
+            "path": "libs/talon/deepagents_talon/__main__.py",
+            "start": 317,
+            "end": 330,
+            "label": "Independent resource scopes"
+          },
+          {
+            "path": "libs/talon/deepagents_talon/checkpoint_backends.py",
+            "start": 26,
+            "end": 55,
+            "label": "Checkpoint default and plugin selection"
+          },
+          {
+            "path": "libs/talon/deepagents_talon/checkpoint_backends.py",
+            "start": 108,
+            "end": 115,
+            "label": "Built-in checkpoint schemes"
+          },
+          {
+            "path": "libs/talon/deepagents_talon/history_backends.py",
+            "start": 38,
+            "end": 91,
+            "label": "Archive, embeddings, generation, and visibility"
+          },
+          {
+            "path": "libs/talon/deepagents_talon/archive_saver.py",
+            "start": 40,
+            "end": 108,
+            "label": "Archive wrapper ownership and active protection"
+          },
+          {
+            "path": "libs/talon/deepagents_talon/background.py",
+            "start": 110,
+            "end": 131,
+            "label": "Memory-only worker registry"
+          }
+        ]
+      },
+      {
+        "id": "talon-runtime-background",
+        "title": "Detached subagents have delivery and acknowledgement semantics",
+        "body": "<p>Talon's background middleware intercepts the existing SDK <code>task</code> and remote <code>start_async_task</code> surfaces; it does not replace the child's compiled graph with an unrelated worker implementation.</p><h3>In-process background lifecycle</h3><ol class=\"explain-steps\"><li><strong>Register and launch under shared limits.</strong> For an ordinary conversation it requires a thread owner, prunes settled jobs, enforces registry/running ceilings under a shared lock, allocates a task ID, copies context, launches an asyncio task, and returns an immediate started message. Nested remote delegation from a subagent is refused.</li><li><strong>Bind the worker thread and reduced authority.</strong> The worker switches to its own task thread and recursion limit, clears approval-operator authority, removes the authorization handler, and retains needed history/cron scope.</li><li><strong>Bound execution, results, and errors.</strong> It is time-bounded; results are capped, and exceptions become bounded failure messages rather than raw credential-bearing errors. A child graph that reaches approval cannot silently run the protected action: a returned interrupt is represented as “needs tool approval” data.</li><li><strong>Deliver results as labelled data.</strong> Completed results remain pending for their owning main conversation. They are injected as labelled subagent-result data, not a new top-level trusted user command.</li><li><strong>Acknowledge only a completed main turn.</strong> Acknowledgement happens only after the main agent completes a turn. If host delivery loses a race or is cancelled, it can requeue consumed results.</li></ol><aside class=\"callout\"><p>This is closer to an in-process acknowledgement protocol than a simple fire-and-forget task list. Nevertheless, the registry itself is not persisted and is not an exactly-once distributed message system.</p></aside>",
+        "sources": [
+          {
+            "path": "libs/talon/deepagents_talon/background.py",
+            "start": 200,
+            "end": 250,
+            "label": "Interception, ownership, capacity, and task creation"
+          },
+          {
+            "path": "libs/talon/deepagents_talon/background.py",
+            "start": 304,
+            "end": 342,
+            "label": "Worker context, deadlines, interrupts, and bounded results"
+          },
+          {
+            "path": "libs/talon/deepagents_talon/background.py",
+            "start": 373,
+            "end": 388,
+            "label": "Results returned as labelled data"
+          },
+          {
+            "path": "libs/talon/deepagents_talon/background.py",
+            "start": 413,
+            "end": 455,
+            "label": "Requeue, acknowledgement, and cancellation"
+          },
+          {
+            "path": "libs/talon/deepagents_talon/host.py",
+            "start": 1240,
+            "end": 1274,
+            "label": "Delivery race returns results to pending work"
+          }
+        ]
+      },
+      {
+        "id": "talon-runtime-cron",
+        "title": "Scheduling claims a run before executing it",
+        "body": "<p><code>PersistentCronScheduler</code> scans on a configurable interval whose default is 60 seconds.</p><h3>Scheduled invocation lifecycle</h3><ol class=\"explain-steps\"><li><strong>Scan and claim due work.</strong> A tick first discards finished jobs, gets due jobs, and executes them sequentially within that tick. Before running a job it calls <code>advance_next_run</code>; if the store does not return a claim, it does not run. This ordering prevents the scheduler from merely rediscovering an unchanged due record while an invocation is underway.</li><li><strong>Create a bounded, fresh graph thread.</strong> Each scheduled invocation gets a fresh job-derived graph thread with a random suffix. It is bounded by a host timeout and attempts interruption recovery on expiry.</li><li><strong>Bind read-only context without live approval authority.</strong> When the origin channel is unambiguous, it can receive the origin chat's read-only history scope. It does not receive a live operator approval or OAuth callback.</li><li><strong>Await delegation within the scheduled turn.</strong> Scheduled delegation is awaited inline instead of detached because there is no later chat delivery turn to collect a result.</li><li><strong>Record completion, then decide delivery.</strong> Success and delivery are tracked separately. The scheduler records the model run, suppresses output beginning or ending with <code>[SILENT]</code>, and otherwise calls the delivery callback.</li><li><strong>Handle delivery and scan failures separately.</strong> A delivery exception changes the recorded job status to error even though the agent may already have completed work. The scan loop catches ordinary exceptions, logs them, waits the normal interval, and continues rather than spinning or dying silently.</li></ol><aside class=\"callout\"><p>The claim-before-execute sequence also means this code should not be described as crash-proof exactly-once scheduling: this inspected path does not replay a run atomically with external side effects.</p><p>For debugging, separate “was due,” “was claimed,” “agent completed,” “silent,” and “channel delivered.”</p></aside>",
+        "sources": [
+          {
+            "path": "libs/talon/deepagents_talon/cron/scheduler.py",
+            "start": 19,
+            "end": 20,
+            "label": "Default tick interval"
+          },
+          {
+            "path": "libs/talon/deepagents_talon/cron/scheduler.py",
+            "start": 76,
+            "end": 117,
+            "label": "Sequential scan and resilient ticker"
+          },
+          {
+            "path": "libs/talon/deepagents_talon/cron/scheduler.py",
+            "start": 133,
+            "end": 207,
+            "label": "Claim, outcome, silence, and delivery status"
+          },
+          {
+            "path": "libs/talon/deepagents_talon/cron/scheduler.py",
+            "start": 210,
+            "end": 220,
+            "label": "Exact silence sentinel rule"
+          },
+          {
+            "path": "libs/talon/deepagents_talon/host.py",
+            "start": 1291,
+            "end": 1357,
+            "label": "Fresh scheduled thread and history scope"
+          },
+          {
+            "path": "libs/talon/deepagents_talon/background.py",
+            "start": 212,
+            "end": 218,
+            "label": "Scheduled subagents run inline"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "acp-runtime",
+    "group": "Applications",
+    "title": "ACP: graph execution as an editor protocol",
+    "kicker": "Handshake, sessions, streams, and permission requests",
+    "summary": "Understand what the Agent Client Protocol adapter translates, what remains the graph factory’s responsibility, and why durable sessions and exact-command approval are explicit features.",
+    "readingMinutes": 11,
+    "sections": [
+      {
+        "id": "acp-runtime-server",
+        "title": "The adapter is a protocol boundary, not a second agent harness",
+        "body": "<p>ACP means <strong>Agent Client Protocol</strong>. Think of its adapter as a translator between an editor and an existing agent graph: editor requests become graph operations; graph messages, plans, tools, and permission pauses become editor updates. The graph still supplies agent behavior, and the application still supplies execution policy.</p><p>For an illustrative report request, the editor sends a prompt, the graph proposes reading the brief or writing the report, and the adapter streams progress back. If the graph pauses for approval, the adapter asks the editor for a decision and resumes that pause. It is not a second harness deciding how the agent should solve the task.</p><h3>Supply the graph before choosing the protocol features</h3><p><code>AgentServerACP</code> subclasses the ACP agent interface. It accepts either a compiled graph or a synchronous factory taking <code>AgentSessionContext(cwd, mode, model)</code>: the session working directory and its selected mode/model.</p><ul><li><strong>Fixed graph or reconstructable factory:</strong> mode and model catalogs require a factory because a fixed graph cannot be rebuilt for changed selections. The server retains working directories, mode/model choices, plans, cancellation flags, MCP (Model Context Protocol) declarations, and permission caches.</li><li><strong>Advertised capabilities:</strong> initialization returns the protocol version and capabilities. Image prompting is advertised; durable loading is advertised only when the constructor enables it.</li><li><strong>Application responsibilities:</strong> the adapter does not independently provision a secure backend, define all tool policy, or make arbitrary model choices safe. The supplied factory and application own those choices.</li></ul><h3>Choose the intended serving assembly</h3><p>The bare <code>python -m deepagents_acp</code> entry calls a test-agent serving function. Code's <code>dcode --acp</code> is a different assembly: it loads Code model/tools/configuration, builds through a per-session factory, enables loading, and serves over stdio using the ACP dependency's runner.</p><p>Code additionally supplies thread leases and, for Auto, trusted control-state handling. These are not automatic features of every user-created ACP server. The following sections distinguish durable checkpoint state from process-local conversation state and then trace the permission round trip.</p>",
+        "sources": [
+          {
+            "path": "libs/acp/deepagents_acp/server.py",
+            "start": 215,
+            "end": 276,
+            "label": "Factory context and session-owned state"
+          },
+          {
+            "path": "libs/acp/deepagents_acp/server.py",
+            "start": 346,
+            "end": 362,
+            "label": "Advertised capabilities"
+          },
+          {
+            "path": "libs/acp/deepagents_acp/__main__.py",
+            "start": 1,
+            "end": 14,
+            "label": "Demo module entry"
+          },
+          {
+            "path": "libs/code/deepagents_code/main.py",
+            "start": 3822,
+            "end": 3863,
+            "label": "Code graph factory, leases, and ACP serving"
+          },
+          {
+            "path": "libs/code/deepagents_code/main.py",
+            "start": 2996,
+            "end": 2999,
+            "label": "Code ACP stdio switch"
+          }
+        ]
+      },
+      {
+        "id": "acp-runtime-sessions",
+        "title": "Session creation and durable loading are not the same operation",
+        "body": "<p>Session creation, durable loading, and in-process conversation memory are different contracts.</p><ol class=\"explain-steps\"><li><strong>Create and optionally persist the session.</strong> A new session gets a random hexadecimal UUID, stores its working directory and MCP declarations, initializes options, and optionally persists empty state plus ACP metadata.</li><li><strong>Require durable checkpoint storage for loading.</strong> A session configured for durable loading requires a real checkpointer.</li><li><strong>Validate and restore the original session.</strong> During load, the adapter retrieves checkpoint metadata, requires an ACP-session marker, and rejects a working directory that differs from the one used at creation. It restores options and replays human, AI, and tool messages back to the client.</li><li><strong>Use process-local fallback only for ordinary prompts.</strong> In contrast, ordinary prompt processing adds a <code>MemorySaver</code> when the supplied graph lacks a checkpointer. This supports conversation state on the current graph instance, but it cannot satisfy restart persistence.</li><li><strong>Opt into restart persistence explicitly.</strong> Advertising <code>session/load</code> is therefore a separate opt-in contract. A process-local map of session IDs is not enough; the checkpoint backend and durable metadata must survive.</li><li><strong>Reuse checkpoint storage across rebuilds.</strong> The session ID remains the graph thread identity, but the factory can return a new graph. History is available only if that graph reconnects to the same checkpoint storage. A fresh <code>MemorySaver</code> under the same thread ID has no old checkpoints; the automatic fallback does not guarantee continuity across session, model, or mode rebuilds.</li></ol><aside class=\"callout\"><p>Do not interpret this source as a blanket concurrency guarantee for arbitrary overlapping client prompts: the adapter retains one active graph instance and active-session marker while maintaining multiple session maps. Integrators should inspect their transport's request scheduling rather than assuming a stateless HTTP-handler model.</p></aside>",
+        "sources": [
+          {
+            "path": "libs/acp/deepagents_acp/server.py",
+            "start": 364,
+            "end": 428,
+            "label": "Creation, metadata validation, replay"
+          },
+          {
+            "path": "libs/acp/deepagents_acp/server.py",
+            "start": 792,
+            "end": 816,
+            "label": "Session config and required durable checkpointer"
+          },
+          {
+            "path": "libs/acp/deepagents_acp/server.py",
+            "start": 931,
+            "end": 973,
+            "label": "Session factory reset and in-process fallback"
+          }
+        ]
+      },
+      {
+        "id": "acp-runtime-prompt",
+        "title": "Prompt execution loops across graph interrupts",
+        "body": "<p>The adapter converts ACP text, image, audio, resource, and embedded-resource variants through dedicated conversion helpers before constructing LangChain messages.</p><h3>Conversion and prompt lifecycle</h3><ol class=\"explain-steps\"><li><strong>Convert only the implemented payloads.</strong> Actual support is narrower than the union of accepted schema types: text is copied, inline images become data URLs, resource references are rendered as descriptive text, and audio conversion explicitly raises <code>NotImplementedError</code>.</li><li><strong>Stream messages and graph updates.</strong> The graph stream requests <code>messages</code> and <code>updates</code> with subgraphs enabled.</li><li><strong>Translate streamed tool and plan state.</strong> Tool-call chunks are accumulated for protocol tool updates, todo changes become plan updates, and interrupt updates suspend ordinary execution.</li><li><strong>Resume the interrupt rather than resubmit input.</strong> The outer loop then obtains decisions and resumes using <code>Command(resume={\"decisions\": ...})</code> rather than appending the original user prompt again. This distinction prevents approval round-trips from becoming duplicate conversational inputs.</li><li><strong>Observe cooperative cancellation.</strong> Cancellation is represented as a session flag checked before and during streaming; the prompt response reports <code>cancelled</code> when observed, otherwise <code>end_turn</code> on completion.</li></ol><aside class=\"callout\"><p>A resource URI is not automatically read from disk by the conversion helper, and making its display path relative is not an access-control check.</p><p>This is cooperative control observed by the adapter, not a promise that every external side effect has been rolled back. A client should show the difference between an interrupted turn and a failed tool result, and should not retry execution based solely on a disconnected display.</p></aside>",
+        "sources": [
+          {
+            "path": "libs/acp/deepagents_acp/server.py",
+            "start": 948,
+            "end": 1032,
+            "label": "Content conversion, stream, cancellation, and resume loop"
+          },
+          {
+            "path": "libs/acp/deepagents_acp/server.py",
+            "start": 1139,
+            "end": 1141,
+            "label": "End-turn response"
+          },
+          {
+            "path": "libs/acp/deepagents_acp/utils.py",
+            "start": 19,
+            "end": 99,
+            "label": "Actual conversion behavior and unsupported audio"
+          }
+        ]
+      },
+      {
+        "id": "acp-runtime-permissions",
+        "title": "Always allow execute means an exact request in an exact context",
+        "body": "<p>Read the permission round-trip first, then its two different reuse contracts.</p><h3>Approval lifecycle</h3><ol class=\"explain-steps\"><li><strong>Request a decision for interrupted actions.</strong> When a graph interrupts, the adapter extracts action requests and sends ACP <code>request_permission</code> messages with approve, reject, and conditionally always-allow options.</li><li><strong>Resolve unknown or cancelled decisions safely.</strong> Unknown selected option IDs normalize to rejection; a cancelled permission request is rejection.</li><li><strong>Update approved plans separately.</strong> Approved todo plans have special in-progress update handling, separate from execution approval.</li></ol><h3>Permission reuse contracts</h3><ol class=\"explain-steps\"><li><strong>Key execution grants by the complete request.</strong> For <code>execute</code>, reusable permission is keyed by <code>AgentSessionContext</code> and canonical JSON of the <em>entire</em> argument dictionary.</li><li><strong>Validate arguments before canonicalization.</strong> The request must contain a nonempty string command and be losslessly JSON serializable with non-finite values disallowed. Sorting object keys avoids treating mere dictionary order as a different request.</li><li><strong>Ask again when arguments or context change.</strong> Changing command text, timeout, working-directory arguments, environment arguments, selected mode/model, or session working directory changes the key.</li><li><strong>Do not generalize execute semantics to other tools.</strong> Non-execute tools use a broader per-tool-name session cache instead, so the security semantics are intentionally not identical.</li><li><strong>Read regression coverage for intended distinctions.</strong> The regression tests demonstrate the intended distinctions directly: a changed command asks again, an identical request reuses permission, changed arguments or context ask again, and another session cannot reuse the grant.</li></ol><aside class=\"callout\"><p>These tests are source evidence of the contract, not a claim that they were run for this learning site. The adapter's exact-request policy should also not be conflated with helper functions that parse command types for other allowlist purposes.</p></aside>",
+        "sources": [
+          {
+            "path": "libs/acp/deepagents_acp/server.py",
+            "start": 1143,
+            "end": 1163,
+            "label": "Exact-request canonical permission key"
+          },
+          {
+            "path": "libs/acp/deepagents_acp/server.py",
+            "start": 1193,
+            "end": 1221,
+            "label": "Plan updates and permission reuse"
+          },
+          {
+            "path": "libs/acp/deepagents_acp/server.py",
+            "start": 1245,
+            "end": 1321,
+            "label": "Options, validation, caching, and cancellation"
+          },
+          {
+            "path": "libs/acp/tests/unit_tests/test_execute_permissions.py",
+            "start": 71,
+            "end": 137,
+            "label": "Request, context, and session isolation regression assertions"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "partners-examples",
+    "group": "Applications",
+    "title": "Partners and examples: choose a composition pattern",
+    "kicker": "Integration inventory and runnable-source map",
+    "summary": "Inventory all partner distributions and example families, then distinguish sandbox adapters, interpreter capabilities, instructional profiles, outer loops, and genuinely different application architectures.",
+    "readingMinutes": 17,
+    "sections": [
+      {
+        "id": "partners-examples-inventory",
+        "title": "Five partner packages, two fundamentally different roles",
+        "body": "<p>Choose an example for the boundary you want to learn: constructing an agent, changing where its tools run, or adding an outer control loop. Examples are compositions to inspect and adapt, not a single recommended production architecture.</p><h3>A recommended first reading path</h3><ol class=\"explain-steps\"><li><strong>Begin with <code>deep_research</code>.</strong> Follow its compact <code>create_deep_agent</code> call: model, tools, instructions, and researcher child. This exposes the core composition without the terminal application's process lifecycle.</li><li><strong>Choose a second example by goal.</strong> Study <code>content-builder-agent</code> for file-backed instructions and skills, <code>text-to-sql-agent</code> for a toolkit, or <code>nvidia_deep_agent</code> for multiple models and remote GPU/CPU execution.</li><li><strong>Add infrastructure only when it answers your question.</strong> Compare sandbox providers if tools must run remotely; inspect QuickJS for interpreter-driven tool calls. Choose Ralph, rubric, better-harness, wiki, or the async server when the outer workflow is what you need to understand.</li></ol><p>That is a reading recommendation, not evidence these examples have run here. Model credentials, service access, database files, and example-local dependencies remain prerequisites.</p><h3>Five partner packages, two roles</h3><p>Four packages adapt remote execution/file APIs to the SDK backend protocol. QuickJS instead adds an interpreter tool and lifecycle through middleware. A backend and interpreter can coexist; selecting one does not select the other. All five distributions declare Python <code>&gt;=3.11,&lt;4.0</code>.</p><div class=\"table-wrap\"><table><thead><tr><th>Distribution at this revision</th><th>Import and primary implementation</th><th>Role</th></tr></thead><tbody><tr><td><code>langchain-daytona</code> 0.0.9</td><td><code>langchain_daytona</code>; <code>DaytonaSandbox</code></td><td>Adapt an existing Daytona sandbox to BaseSandbox.</td></tr><tr><td><code>langchain-modal</code> 0.0.7</td><td><code>langchain_modal</code>; <code>ModalSandbox</code></td><td>Remote execution and binary file transfer through Modal.</td></tr><tr><td><code>langchain-runloop</code> 0.0.7</td><td><code>langchain_runloop</code>; <code>RunloopProvider</code>, <code>RunloopSandbox</code></td><td>Create/attach devboxes and adapt execution.</td></tr><tr><td><code>langchain-vercel-sandbox</code> 0.0.2</td><td><code>langchain_vercel_sandbox</code>; <code>VercelSandbox</code></td><td>Adapt Vercel remote commands and files.</td></tr><tr><td><code>langchain-quickjs</code> 0.3.11</td><td><code>langchain_quickjs</code>; <code>CodeInterpreterMiddleware</code></td><td>In-process sandboxed JavaScript REPL middleware, not a cloud sandbox backend.</td></tr></tbody></table></div><aside class=\"callout\"><p>Provider credentials, resource creation, network policy, and billing remain provider/application concerns. The later sections retain the complete example-family inventory.</p></aside>",
+        "sources": [
+          {
+            "path": "libs/partners/daytona/pyproject.toml",
+            "start": 5,
+            "end": 26,
+            "label": "Daytona package metadata"
+          },
+          {
+            "path": "libs/partners/modal/pyproject.toml",
+            "start": 5,
+            "end": 26,
+            "label": "Modal package metadata"
+          },
+          {
+            "path": "libs/partners/runloop/pyproject.toml",
+            "start": 5,
+            "end": 26,
+            "label": "Runloop package metadata"
+          },
+          {
+            "path": "libs/partners/vercel/pyproject.toml",
+            "start": 5,
+            "end": 26,
+            "label": "Vercel package metadata"
+          },
+          {
+            "path": "libs/partners/quickjs/pyproject.toml",
+            "start": 5,
+            "end": 25,
+            "label": "QuickJS package metadata"
+          },
+          {
+            "path": "libs/partners/daytona/langchain_daytona/sandbox.py",
+            "start": 103,
+            "end": 128,
+            "label": "Daytona backend class"
+          },
+          {
+            "path": "libs/partners/modal/langchain_modal/sandbox.py",
+            "start": 16,
+            "end": 22,
+            "label": "Modal backend class"
+          },
+          {
+            "path": "libs/partners/runloop/langchain_runloop/provider.py",
+            "start": 123,
+            "end": 151,
+            "label": "Runloop lifecycle API"
+          },
+          {
+            "path": "libs/partners/vercel/langchain_vercel_sandbox/sandbox.py",
+            "start": 31,
+            "end": 55,
+            "label": "Vercel backend class"
+          },
+          {
+            "path": "libs/partners/quickjs/langchain_quickjs/middleware.py",
+            "start": 125,
+            "end": 130,
+            "label": "QuickJS middleware class"
+          },
+          {
+            "path": "examples/deep_research/agent.py",
+            "start": 39,
+            "end": 58,
+            "label": "Recommended first example exposes tools, model, and child composition"
+          }
+        ]
+      },
+      {
+        "id": "partners-examples-provider-semantics",
+        "title": "Backend compatibility does not erase provider semantics",
+        "body": "<p>The normal execution story is simple: submit a command to the selected provider, wait for completion, and return its output and exit status. A timeout bounds waiting or execution according to that provider's adapter; it is not evidence that every remote process was stopped or that prior file effects were undone.</p><p>Illustratively, <code>cat /notes/brief.txt</code> can finish before the deadline and return text plus a successful exit status. If a different command exceeds its deadline, inspect both the reported status and provider cleanup behavior before retrying. This is a conceptual trace, not a provider run.</p><h3>Provider-specific execution and resource contracts</h3><div class=\"table-wrap\"><table><thead><tr><th>Provider</th><th>Execution or resource lifecycle</th><th>Important boundary or caveat</th></tr></thead><tbody><tr><td>Modal</td><td>Calls <code>bash -c</code>, waits, reads stdout/stderr, and returns the provider exit code.</td><td>Binary file helpers reject non-absolute paths and map filesystem errors.</td></tr><tr><td>Daytona</td><td>Uses session commands/logs with one remaining-deadline budget across requests and a small best-effort cleanup allowance.</td><td>Compensates for provider timeout rounding and an added SDK HTTP timeout buffer. These are material differences beneath the shared <code>execute</code> interface.</td></tr><tr><td>Vercel</td><td>Launches a detached <code>bash -lc</code> command, waits against the effective deadline, attempts to kill timed-out work, and reports timeout code 124.</td><td><p>A failed kill is logged because the command can remain alive and incur cost.</p><p>If log fetching fails after completion, the exit code is preserved and unavailable output is reported rather than erasing the completed outcome.</p><p>The output cap uses string slicing although the constant/message call it bytes; it is not byte-precise UTF-8 accounting.</p></td></tr><tr><td>Runloop</td><td>Can attach a devbox or select/create a blueprint. It paginates exact-name discovery, accepts completed builds, distinguishes failed from still-building states, and avoids duplicating a same-name incomplete blueprint.</td><td>The constructor's timeout parameter is reserved for API parity rather than consumed as a creation deadline.</td></tr></tbody></table></div><aside class=\"callout\"><p>A shared method name does not erase provider semantics. For diagnostics, inspect provider-specific timeout, process cleanup, file, lifecycle, and snapshot behavior.</p></aside>",
+        "sources": [
+          {
+            "path": "libs/partners/modal/langchain_modal/sandbox.py",
+            "start": 24,
+            "end": 119,
+            "label": "Modal file/error and command semantics"
+          },
+          {
+            "path": "libs/partners/daytona/langchain_daytona/sandbox.py",
+            "start": 30,
+            "end": 92,
+            "label": "Daytona timeout adaptation"
+          },
+          {
+            "path": "libs/partners/daytona/langchain_daytona/sandbox.py",
+            "start": 146,
+            "end": 178,
+            "label": "Execute deadline and cleanup contract"
+          },
+          {
+            "path": "libs/partners/vercel/langchain_vercel_sandbox/sandbox.py",
+            "start": 62,
+            "end": 131,
+            "label": "Vercel detached execution, cleanup, and output handling"
+          },
+          {
+            "path": "libs/partners/runloop/langchain_runloop/provider.py",
+            "start": 69,
+            "end": 120,
+            "label": "Blueprint pagination and build state handling"
+          },
+          {
+            "path": "libs/partners/runloop/langchain_runloop/provider.py",
+            "start": 143,
+            "end": 166,
+            "label": "Creation/attachment and reserved timeout"
+          }
+        ]
+      },
+      {
+        "id": "partners-examples-quickjs",
+        "title": "Interpreter safety depends on bridges, not just VM isolation",
+        "body": "<p><strong>QuickJS</strong> is an embedded JavaScript engine. Here, middleware exposes a REPL (read–evaluate–print loop) tool inside the Python agent process; it is not a remote cloud machine. Each LangGraph thread gets a private interpreter slot, with thread-, turn-, or call-scoped persistence.</p><p>The direct VM (virtual machine) schema promises no filesystem, network, or real-clock access. External capabilities arrive through explicitly enabled host bridges. PTC means <strong>programmatic tool calling</strong>: JavaScript invokes Python tools through <code>tools.*</code>, so bridge configuration determines what the interpreter can actually do.</p><h3>Separate the resource and authority budgets</h3><ul><li><strong>Memory and output:</strong> source defaults include a 64 MiB heap allowance and independently bounded result/stdout text. These are separate from execution time and tool-call limits.</li><li><strong>Execution time:</strong> the default five-second budget measures VM execution, excluding time spent waiting for Python <code>tools.*</code> coroutines. A slow host call can exceed five seconds of wall time without exhausting VM time.</li><li><strong>Host-call count:</strong> the default PTC budget is 256 bridge calls. Limiting count does not establish whether a tool is authorized; exposure and approval are separate decisions.</li><li><strong>Delegation:</strong> JavaScript <code>task(...)</code> runs inside an approved interpreter invocation and does not trigger parent HITL (human-in-the-loop review) for every dispatch. Gate the interpreter, constrain exposed tools, add child-graph approval, or disable that dispatch path as appropriate.</li></ul><h3>What persisted interpreter state means</h3><p>State has a private slot identifier, snapshot payload, and HMAC channel. HMAC means <strong>hash-based message authentication code</strong>: a keyed integrity tag, not encryption. When a snapshot signing key is configured in thread mode, snapshots are signed before checkpointing and verified before restore; missing or mismatched tags are rejected.</p><p>Without a signing key, persisted snapshots are not integrity-checked. This is a storage-trust concern separate from whether JavaScript can call an external tool. “Sandboxed JavaScript” needs both the VM restrictions and the actual bridge policy explained.</p><aside class=\"callout\"><p>Disabling timeout is hazardous: asyncio cancellation cannot stop a runaway VM evaluation. Disabling the PTC call budget permits unbounded bridge-call loops. External admission and deadline controls are still needed for untrusted workloads.</p></aside>",
+        "sources": [
+          {
+            "path": "libs/partners/quickjs/langchain_quickjs/middleware.py",
+            "start": 62,
+            "end": 110,
+            "label": "Defaults, snapshot state, and persistence modes"
+          },
+          {
+            "path": "libs/partners/quickjs/langchain_quickjs/middleware.py",
+            "start": 125,
+            "end": 188,
+            "label": "Per-thread isolation, timeout limits, host calls, and child dispatch"
+          },
+          {
+            "path": "libs/partners/quickjs/langchain_quickjs/middleware.py",
+            "start": 222,
+            "end": 235,
+            "label": "Snapshot HMAC signing is explicit and absent without a key"
+          }
+        ]
+      },
+      {
+        "id": "partners-examples-direct-agents",
+        "title": "Direct SDK examples: research, content, SQL, and GPU work",
+        "body": "<p>These examples all construct agents directly, but vary the supplied tools, instructions, subagents, and execution backend. Read one complete example at a time rather than treating the collection as a launch sequence.</p><h3>deep_research — instructions and specialist delegation</h3><p>This example constructs an SDK agent with an Anthropic model, Tavily/think tools, a research system prompt, and a researcher subagent. It is a useful first composition to inspect because the top-level factory call makes those inputs visible. It does not include the full Code terminal runtime.</p><h3>content-builder-agent — file-backed profiles and an example-local loader</h3><p>It loads memory and skills from files, adds image-generation tools, and converts a YAML mapping keyed by subagent name into a list of subagent specifications through its own loader. That helper does not mean the core SDK natively discovers arbitrary YAML subagents.</p><h3>text-to-sql-agent — database toolkit authority</h3><p>It builds a SQLDatabaseToolkit against its configured database, supplies those tools plus instruction/skill files, uses a local FilesystemBackend, and explicitly supplies an empty subagent list. Database/toolkit authorization still matters: a text-to-SQL use case does not make an arbitrary database connection read-only.</p><h3>nvidia_deep_agent — multiple models and remote processing</h3><p>A configurable frontier orchestrator delegates to NVIDIA Nemotron research and a separate data-processing child. Its actual backend factory returns a <code>ModalSandbox</code>, selects GPU or CPU from runtime context, attaches a named sandbox or creates one, and seeds skill/memory files only on creation.</p><aside class=\"callout\"><p>NVIDIA's introductory module prose mentions CompositeBackend routing, but the inspected factory does not construct one. Memory edits persist for the sandbox lifetime, not in a durable external memory service. This illustrates why implementation is stronger evidence than introductory comments.</p></aside>",
+        "sources": [
+          {
+            "path": "examples/deep_research/agent.py",
+            "start": 51,
+            "end": 58,
+            "label": "Research agent construction"
+          },
+          {
+            "path": "examples/content-builder-agent/content_writer.py",
+            "start": 134,
+            "end": 174,
+            "label": "Example-local YAML loader and SDK composition"
+          },
+          {
+            "path": "examples/text-to-sql-agent/agent.py",
+            "start": 20,
+            "end": 49,
+            "label": "SQL toolkit and filesystem setup"
+          },
+          {
+            "path": "examples/nvidia_deep_agent/src/agent.py",
+            "start": 43,
+            "end": 99,
+            "label": "Multi-model GPU example agent"
+          },
+          {
+            "path": "examples/nvidia_deep_agent/src/backend.py",
+            "start": 35,
+            "end": 104,
+            "label": "Actual Modal factory and one-time seed"
+          }
+        ]
+      },
+      {
+        "id": "partners-examples-workflows",
+        "title": "Outer-loop examples solve a different orchestration problem",
+        "body": "<p>An outer loop decides when to call an agent again, how to evaluate its work, or where to deliver it. That is different from the tool/model loop inside one graph invocation. Each example below owns a distinct outer-loop contract.</p><h3>ralph_mode — repeat against the working filesystem</h3><p>Ralph repeatedly calls Code's <code>run_non_interactive</code>, prompting the next iteration to inspect prior filesystem work. A limit of zero is unbounded; exit 130 breaks, while other nonzero exits are printed and the loop continues.</p><p>There is no independent objective-success detector in this loop. Persistence is largely the working filesystem. An unlimited default is not an efficiency or convergence guarantee: repeated runs can inspect the same report artifact without proving it meets the user's objective.</p><h3>rubric_middleware — bounded drafting and grading</h3><p>A drafting agent, grader, and acceptance rubric form a feedback loop with an iteration bound and LangSmith-oriented real-model configuration. Unlike mere repetition, this example gives the loop an explicit judgment surface.</p><h3>better-harness — optimize editable harness surfaces</h3><p>This optimization workspace materializes editable surfaces under <code>/current</code>, exposes train feedback/history, invokes a proposer, reloads changes, and builds a candidate variant. Improvement on visible training cases is not by itself evidence of generalization.</p><h3>llm-wiki — analyze, then conditionally file</h3><p>The query workflow first requests read-only analysis and an explicit filing decision. A missing decision defaults to skip; the decision is logged, and a separate filing pass runs only when selected. Its instructions distinguish canonical wiki evidence from operational logs and previous query-routing hints.</p><h3>async-subagent-server — coordinate a remote researcher</h3><p>A supervisor graph pairs with a remote researcher target. This demonstrates SDK remote subagent coordination, not Talon's process-local background registry.</p><aside class=\"callout\"><p>These are application-level orchestration choices around the harness. None is a universal behavior silently supplied by every SDK agent.</p></aside>",
+        "sources": [
+          {
+            "path": "examples/ralph_mode/ralph_mode.py",
+            "start": 101,
+            "end": 143,
+            "label": "Actual autonomous outer loop and exit behavior"
+          },
+          {
+            "path": "examples/rubric_middleware/rubric_agent.py",
+            "start": 1,
+            "end": 6,
+            "label": "Rubric demonstration purpose"
+          },
+          {
+            "path": "examples/rubric_middleware/rubric_agent.py",
+            "start": 117,
+            "end": 139,
+            "label": "Real-model rubric controls"
+          },
+          {
+            "path": "examples/better-harness/better_harness/agent.py",
+            "start": 51,
+            "end": 105,
+            "label": "Materialized proposer workspace"
+          },
+          {
+            "path": "examples/better-harness/better_harness/agent.py",
+            "start": 123,
+            "end": 173,
+            "label": "Candidate proposal and variant construction"
+          },
+          {
+            "path": "examples/llm-wiki/query.py",
+            "start": 50,
+            "end": 105,
+            "label": "Evidence prompt and fail-closed filing parser"
+          },
+          {
+            "path": "examples/llm-wiki/query.py",
+            "start": 131,
+            "end": 163,
+            "label": "Query and conditional filing workflow"
+          },
+          {
+            "path": "examples/async-subagent-server/supervisor.py",
+            "start": 60,
+            "end": 96,
+            "label": "Supervisor SDK construction and invoke"
+          }
+        ]
+      },
+      {
+        "id": "partners-examples-profiles",
+        "title": "Deployment and profile examples are assets, not bundled hosting implementations",
+        "body": "<p>The remaining families mainly package configuration and profile assets. They show what to hand to a runtime or deployment platform, not an implementation of that external platform.</p><h3>Four deployment-manifest examples</h3><ul><li><code>deploy-coding-agent</code> supplies a named <code>agent.json</code> deployment manifest.</li><li><code>deploy-content-writer</code> supplies its own named manifest and content-oriented profile assets.</li><li><code>deploy-gtm-agent</code> adds a description identifying research/content coordination.</li><li><code>deploy-mcp-docs-agent</code> supplies its own named manifest for the docs-agent role.</li></ul><p>All four contain runtime model identifiers. Their instruction, skill, and subagent assets describe intended roles, but a six-line manifest is not the hosting implementation. Model IDs are example-specific choices at this revision, not package defaults.</p><h3>downloading_agents — a portable profile layout</h3><p>This family packages a content-writer archive with <code>AGENTS.md</code> and skill directories. Its README still pins <code>deepagents-cli==0.0.13</code> and the old executable. Reuse the folder/profile idea without treating those old startup commands as current Code instructions.</p><h3>talon — a container assembly</h3><p>The container example's final command runs <code>deepagents-talon</code>, with workspace and MCP configuration environment setup.</p><p>These six directories plus research, content-builder, SQL, NVIDIA, Ralph, rubric, better-harness, wiki, and async-server account for all fifteen top-level example directories in this checkout.</p><aside class=\"callout\"><p>This is a source map, not evidence that credentials, remote services, database files, deployment permissions, or provider models were available or that the examples ran here. Inspect implementation and local metadata before production reuse.</p></aside>",
+        "sources": [
+          {
+            "path": "examples/deploy-coding-agent/agent.json",
+            "start": 1,
+            "end": 6,
+            "label": "Coding deployment manifest"
+          },
+          {
+            "path": "examples/deploy-content-writer/agent.json",
+            "start": 1,
+            "end": 6,
+            "label": "Content deployment manifest"
+          },
+          {
+            "path": "examples/deploy-gtm-agent/agent.json",
+            "start": 1,
+            "end": 7,
+            "label": "GTM deployment manifest"
+          },
+          {
+            "path": "examples/deploy-mcp-docs-agent/agent.json",
+            "start": 1,
+            "end": 6,
+            "label": "Docs MCP deployment manifest"
+          },
+          {
+            "path": "examples/downloading_agents/README.md",
+            "start": 11,
+            "end": 41,
+            "label": "Historical commands and profile archive layout"
+          },
+          {
+            "path": "examples/talon/Dockerfile",
+            "start": 5,
+            "end": 12,
+            "label": "Container workspace and MCP configuration"
+          },
+          {
+            "path": "examples/talon/Dockerfile",
+            "start": 67,
+            "end": 67,
+            "label": "Container starts Talon"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "eval-harness",
+    "group": "Engineering",
+    "title": "Evaluations: inspect what the score actually measures",
+    "kicker": "Behavioral tests, trajectories, trials, and external datasets",
+    "summary": "Separate deterministic regression tests from real-model evaluations and benchmark adapters; understand why passing correctness does not imply optimal tool use or production safety.",
+    "readingMinutes": 13,
+    "sections": [
+      {
+        "id": "eval-harness-fixtures",
+        "title": "Real-model evaluations are an explicit operating mode",
+        "body": "<p>Decide what you want to measure before choosing a command. An offline regression, a model-behavior probe, repeated trials, and a benchmark adapter answer different questions. None substitutes for all the others.</p><h3>Match evidence to its purpose</h3><div class=\"table-wrap\"><table><thead><tr><th>Evidence surface</th><th>Question it helps answer</th><th>What it does not establish alone</th></tr></thead><tbody><tr><td>Offline harness unit tests</td><td>Does deterministic harness logic meet its tested contracts?</td><td>A real model's task success.</td></tr><tr><td>Real-model evaluation cases</td><td>Did this model/harness configuration meet these task assertions?</td><td>Universal success or production safety.</td></tr><tr><td>Repeated trials and aggregation</td><td>How variable are the measured outcomes?</td><td>Validity of uninspected assertions or all deployments.</td></tr><tr><td>External benchmark adapters</td><td>How does the chosen graph perform under that dataset, environment, and verifier contract?</td><td>Equivalence to a differently configured runner.</td></tr></tbody></table></div><h3>Selection tiers are not scoring rules</h3><p><code>baseline</code> and <code>hillclimb</code> are test-selection tier tags. Category filters select subject matter. Neither is the same distinction as hard correctness versus soft efficiency: <code>.success(...)</code> can fail a selected case, while <code>.expect(...)</code> logs trajectory/efficiency feedback without failing it.</p><p>For example, selecting a tier changes which cases run. Requiring the final report file to contain particular content changes a case's pass condition. Expecting one read instead of three changes efficiency feedback. Keep those three decisions separate when interpreting a score.</p><h3>Prepare and select the real-model run</h3><ol class=\"explain-steps\"><li><strong>Satisfy prerequisites.</strong> <code>libs/evals/tests/evals</code> is not another offline unit-test folder. Its conftest aborts without tracing and requires an explicit <code>--model</code>.</li><li><strong>Select supported paths.</strong> The suite registers categories and baseline/hillclimb tiers, supports category inclusion/exclusion, and rejects unknown filter values. Marked tests may run through QuickJS; <code>--repl quickjs</code> skips unsupported or unmarked tests rather than making every test interpreter-compatible.</li><li><strong>Map categories to scenarios.</strong> The registry covers file operations, retrieval, tool use, memory, conversation, summarization, unit-test feedback, and LangChain middleware. Concrete files cover skills, subagents, todos, cross-turn memory, context summarization, goal tools, follow-up quality, Auto authorization, constrained/relational tool use, and external benchmarks.</li><li><strong>Record the full configuration.</strong> Keep the explicit model spec, provider routing/fallback policy, reasoning settings, interpreter selection, harness revision, tier/category selection, and trial count.</li><li><strong>Record routing, not just a model name.</strong> Strict OpenRouter provider-selection and reasoning-effort flags exist because settings affect measured behavior. One endpoint's result cannot be casually attributed to every endpoint serving a similarly named model.</li></ol><aside class=\"callout\"><p>These are curated capability and regression probes, not a complete specification of everything the application can do. The next sections explain trajectories, report aggregation, and the benchmark catalog in that order.</p></aside>",
+        "sources": [
+          {
+            "path": "libs/evals/tests/evals/conftest.py",
+            "start": 30,
+            "end": 74,
+            "label": "Tracing and explicit model are mandatory"
+          },
+          {
+            "path": "libs/evals/tests/evals/conftest.py",
+            "start": 77,
+            "end": 133,
+            "label": "Eval filters, routing, reasoning, and REPL flags"
+          },
+          {
+            "path": "libs/evals/tests/evals/conftest.py",
+            "start": 136,
+            "end": 200,
+            "label": "Validated include/exclude filtering"
+          },
+          {
+            "path": "libs/evals/tests/evals/conftest.py",
+            "start": 219,
+            "end": 241,
+            "label": "REPL eligibility and run metadata"
+          },
+          {
+            "path": "libs/evals/deepagents_evals/categories.json",
+            "start": 1,
+            "end": 30,
+            "label": "Canonical categories"
+          }
+        ]
+      },
+      {
+        "id": "eval-harness-trajectory",
+        "title": "Correctness assertions fail; efficiency expectations only log",
+        "body": "<p>A trajectory is the agent's route through a task: actions, tool observations, and resulting files, not only its final prose. <code>run_agent</code> converts graph results into <code>AgentTrajectory</code> so tests can inspect that route as well as the answer.</p><h3>Invocation and trajectory lifecycle</h3><ol class=\"explain-steps\"><li><strong>Prepare the invocation.</strong> <code>run_agent</code> builds inputs, allocates a thread ID when absent, and logs model/run inputs.</li><li><strong>Invoke and normalize.</strong> It calls the compiled graph, logs outputs, checks for a mapping result, and converts it into an <code>AgentTrajectory</code>.</li><li><strong>Retain evidence.</strong> Ordered AI actions and corresponding tool observations sit alongside a normalized file map. This preserves how the answer was obtained.</li></ol><h3>Two scoring contracts, independent of selection tier</h3><div class=\"table-wrap\"><table><thead><tr><th>Scorer API</th><th>Effect</th></tr></thead><tbody><tr><td><code>.success(...)</code></td><td>Hard correctness assertions: violations fail the case.</td></tr><tr><td><code>.expect(...)</code></td><td>Soft efficiency/trajectory expectations: feedback is logged but never fails the case.</td></tr></tbody></table></div><p>The implementation logs actual step/tool-call counts, evaluates expectation feedback, then calls <code>pytest.fail</code> only for violated success assertions. A green test can therefore have an inefficient or unexpected tool sequence. This is not the baseline/hillclimb distinction, which controls case selection.</p><h3>Read the actual assertion placement</h3><ul><li><strong>Seeded-file case:</strong> it asks for the third word on the second line and requires “three” in the answer. Two expected steps and one read request are efficiency feedback, not additional hard pass conditions.</li><li><strong>Overwrite case:</strong> hard checks require the resulting file to equal the new content and the answer to contain DONE.</li><li><strong>Targeted-edit case:</strong> an <code>edit_file</code> call is expected, but the hard checks inspect the content change. A catalog title saying “prefers edit” is not enough to make tool choice a hard guarantee.</li></ul><p>Illustratively, two runs could both produce the required <code>/notes/report.txt</code>, while one rereads the brief unnecessarily. They can share a correctness outcome but differ in logged efficiency. That illustrates the scoring API; it is not a recorded evaluation result.</p><aside class=\"callout\"><p>These evaluations establish only the supplied cases and assertions under the selected model configuration. They do not prove all filesystem operations safe, all requests successful, fully grounded prose, or absence of unnecessary actions. Exact output/file assertions and judged responses have different evidence strengths.</p></aside>",
+        "sources": [
+          {
+            "path": "libs/evals/tests/evals/utils.py",
+            "start": 27,
+            "end": 54,
+            "label": "Trajectory structure"
+          },
+          {
+            "path": "libs/evals/tests/evals/utils.py",
+            "start": 1198,
+            "end": 1253,
+            "label": "Hard success versus soft efficiency API"
+          },
+          {
+            "path": "libs/evals/tests/evals/utils.py",
+            "start": 1329,
+            "end": 1404,
+            "label": "Actual logging and hard-failure behavior"
+          },
+          {
+            "path": "libs/evals/tests/evals/utils.py",
+            "start": 1463,
+            "end": 1511,
+            "label": "Invocation and scoring pipeline"
+          },
+          {
+            "path": "libs/evals/tests/evals/test_file_operations.py",
+            "start": 33,
+            "end": 79,
+            "label": "Read/overwrite assertions"
+          },
+          {
+            "path": "libs/evals/tests/evals/test_file_operations.py",
+            "start": 106,
+            "end": 132,
+            "label": "Targeted edit expectation versus content success"
+          }
+        ]
+      },
+      {
+        "id": "eval-harness-runner",
+        "title": "The unified CLI distinguishes failures from unusable reports",
+        "body": "<p><code>deepagents-evals</code> wraps single runs, repeated trials, aggregation, radar generation, catalog generation/checks, model-group discovery, and listing. It can emit JSON and preview commands.</p><h3>Runner and report lifecycle</h3><ol class=\"explain-steps\"><li><strong>Separate offline checks from real-model evaluations.</strong> The package Makefile separates offline unit tests from model evaluations. <code>make test</code> disables network sockets for unit tests.</li><li><strong>Choose a single run or repeated trials.</strong> <code>make evals MODEL=...</code> invokes the real-model suite, while <code>make evals-trials MODEL=... TRIALS=...</code> runs the trial aggregator. Trial summaries report variation rather than allowing a single fortunate run to stand in for stability.</li><li><strong>Derive trial failure from reports.</strong> The implementation explicitly warns that per-trial return codes are not a reliable failure signal because the reporter can rewrite pytest session status; aggregate failure is derived from report counts.</li><li><strong>Interpret the runner outcome category.</strong> Its exit taxonomy distinguishes ordinary success, evaluation failure, configuration error, and absence of usable reports.</li><li><strong>Generate and interpret reporting artifacts.</strong> Generated catalogs and model groups are checked artifacts, not hand-maintained authoritative descriptions of uninspected behavior.</li></ol><aside class=\"callout\"><p>Commands shown here are source-derived usage examples, <em>not commands executed for this site</em>.</p></aside><p>Run them from <code>libs/evals</code> with a metadata-compatible Python environment, appropriate credentials, and an understood cost envelope:</p><pre><code class=\"language-bash\"># Illustrative contributor commands; not executed here.\nmake test\nmake evals MODEL=anthropic:claude-sonnet-4-6\nmake evals-trials MODEL=anthropic:claude-sonnet-4-6 TRIALS=3\nmake eval-catalog\nmake type</code></pre><aside class=\"callout\"><p>A zero-exit chart-generation command proves that a chart was generated, not that its input scores were valid. Likewise, generating a catalog proves discovery, not that all cataloged evaluations passed.</p></aside>",
+        "sources": [
+          {
+            "path": "libs/evals/deepagents_evals/cli.py",
+            "start": 1,
+            "end": 27,
+            "label": "CLI subcommands and exit taxonomy"
+          },
+          {
+            "path": "libs/evals/deepagents_evals/cli.py",
+            "start": 43,
+            "end": 59,
+            "label": "Failure counts versus trial exit codes"
+          },
+          {
+            "path": "libs/evals/deepagents_evals/cli.py",
+            "start": 147,
+            "end": 169,
+            "label": "Catalog discovers AST rather than importing eval tests"
+          },
+          {
+            "path": "libs/evals/Makefile",
+            "start": 13,
+            "end": 36,
+            "label": "Offline tests versus model trials"
+          },
+          {
+            "path": "libs/evals/Makefile",
+            "start": 104,
+            "end": 112,
+            "label": "Generated registry/catalog commands"
+          },
+          {
+            "path": "libs/evals/Makefile",
+            "start": 148,
+            "end": 161,
+            "label": "Type and catalog drift checks"
+          }
+        ]
+      },
+      {
+        "id": "eval-harness-benchmarks",
+        "title": "Harbor, DRBench, Context-Bench, and CLBench are separate adapters",
+        "body": "<p>The measurement-purpose map earlier separates local probes from external benchmarks. Here, compare the adapters' operating contracts: graph choice, task generation, verification, and runner environment all affect what a score means. These are independent integrations, not consecutive steps of one benchmark run.</p><h3>Harbor — graph selection and environment execution</h3><p>The installed LangGraph agent is extended to forward a task's <code>skills_dir</code> through configurable input. The benchmark project exposes <code>dcode</code>, <code>bare</code>, and <code>tau3</code> graph entry points.</p><p>The factory module imports both Code and SDK construction, prepares model-specific settings, validates an absolute skill directory without <code>..</code>, and scrubs selected provider/tracing credentials from the shell environment. “Deep Agents benchmark” is underspecified without the selected graph entry point.</p><p>The Harbor Makefile distinguishes concurrency <code>-n</code> from task-count limiting <code>-l</code>, stages checkout dependencies, and offers Docker, Modal, Daytona, Runloop, and LangSmith environment targets.</p><h3>DRBench — enterprise documents and separate verification</h3><p>Tasks come from a pinned upstream commit and separately pinned container images. The adapter's app mode serves enterprise documents through Nextcloud, Mattermost, email, and a file browser. The agent environment excludes the ground-truth answer corpus; verification is designed for a separate environment after agent teardown.</p><p>No generated task directories are committed in that dataset folder. Population and deterministic-generation checks are explicit Makefile tasks. A checked-out dataset manifest does not mean every task asset is already present locally.</p><h3>Context-Bench — generated self-contained tasks</h3><p>Task identifiers map to indexed records in vendored filesystem JSONL. Generation copies corpus and verifier assets into self-contained Harbor tasks. The generator validates IDs as single path components before replacing a generated task directory.</p><h3>CLBench — cross-response memory in an external checkout</h3><p>The system adapter belongs in the external continual-learning-bench checkout. It threads an in-state memory file across responses and builds schema-specific SDK agents with structured output, rather than launching Code's host shell.</p><aside class=\"callout\"><p>These contracts are not alternate names for one evaluation runner. Neither source commands nor checked-in scorecards establish a fresh result here. Record external models, container images, verifier behavior, credentials, and runner architecture with any reported score.</p></aside>",
+        "sources": [
+          {
+            "path": "libs/evals/deepagents_harbor/agent.py",
+            "start": 8,
+            "end": 20,
+            "label": "Harbor skills forwarding"
+          },
+          {
+            "path": "libs/evals/deepagents_harbor/langgraph_project/langgraph.json",
+            "start": 20,
+            "end": 24,
+            "label": "Three benchmark graph choices"
+          },
+          {
+            "path": "libs/evals/deepagents_harbor/langgraph_project/langgraph_agent.py",
+            "start": 45,
+            "end": 93,
+            "label": "Benchmark shell credential scrubbing"
+          },
+          {
+            "path": "libs/evals/deepagents_harbor/langgraph_project/langgraph_agent.py",
+            "start": 153,
+            "end": 187,
+            "label": "Benchmark model setup and skill path validation"
+          },
+          {
+            "path": "libs/evals/harbor_adapters/drbench/adapter.py",
+            "start": 1,
+            "end": 64,
+            "label": "DRBench separation, source pin, and image architecture note"
+          },
+          {
+            "path": "libs/evals/harbor_adapters/contextbench/adapter.py",
+            "start": 31,
+            "end": 111,
+            "label": "Context-Bench record addressing and safe generation"
+          },
+          {
+            "path": "libs/evals/deepagents_clbench/system/system.py",
+            "start": 88,
+            "end": 136,
+            "label": "CLBench state and schema-specific agent construction"
+          },
+          {
+            "path": "libs/evals/Makefile",
+            "start": 41,
+            "end": 84,
+            "label": "Harbor staging and environment commands"
+          },
+          {
+            "path": "libs/evals/Makefile",
+            "start": 118,
+            "end": 138,
+            "label": "Dataset population and deterministic generation checks"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "repo-engineering",
+    "group": "Engineering",
+    "title": "Contributing and testing the actual repository",
+    "kicker": "Locate the component, then choose the evidence",
+    "summary": "Use package-local uv workflows and representative regression contracts, while keeping source inspection, offline tests, integration tests, evaluations, and real deployments distinct.",
+    "readingMinutes": 8,
+    "sections": [
+      {
+        "id": "repo-engineering-commands",
+        "title": "Use component-local commands, not generic platform habits",
+        "body": "<p>For a first contribution, start with one component and one changed contract. You do not need to understand every provider or run every benchmark before checking a small SDK change. This checkout uses <strong>uv</strong>, local <code>pyproject.toml</code>/<code>uv.lock</code> files, Ruff, pytest, and <code>ty</code>, not an unrelated project's Poetry or mypy workflow.</p><h3>A minimal first-contribution path</h3><ol class=\"explain-steps\"><li><strong>Locate the owner and interpreter requirement.</strong> For a core file-tool change, work in <code>libs/deepagents</code> and use its package metadata. An application change instead belongs in that application's component.</li><li><strong>Sync and run the relevant offline regression.</strong> The SDK Makefile accepts <code>TEST_FILE</code>; selecting its file-tool test file exercises that contract without launching a paid model evaluation.</li><li><strong>Run the component's quality gate.</strong> SDK <code>make lint</code> checks Ruff rules and formatting, then invokes its <code>ty</code> type-check target. Broaden to other affected tests and integration checks according to the changed boundary.</li></ol><p>Illustrative commands from the upstream repository root, not commands executed for this site:</p><pre><code class=\"language-bash\">cd libs/deepagents\nuv sync --group test\nmake test TEST_FILE=tests/unit_tests/test_file_system_tools.py\nmake lint</code></pre><h3>Understand the wider component command map</h3><p>Code and SDK Makefiles export frozen lock behavior, keep unit tests under <code>tests/unit_tests</code>, disable network sockets while allowing Unix sockets, and expose separate integration-test targets. Code's <code>make check</code> additionally checks command-catalog drift, process-current-directory discipline, imports, extras/version, lock consistency, and an advisory SDK pin.</p><div class=\"table-wrap\"><table><thead><tr><th>Component working directory</th><th>Source-derived commands</th><th>Important scope</th></tr></thead><tbody><tr><td><code>libs/deepagents</code></td><td><code>make test</code>, <code>make integration_test</code>, <code>make lint</code>, <code>make type</code></td><td>Core offline tests; separate integration suite; ty checks package.</td></tr><tr><td><code>libs/code</code></td><td><code>make bootstrap</code>, <code>make check</code>, <code>make test TEST_FILE=...</code></td><td>Application checks include generated catalogs and host-CWD discipline.</td></tr><tr><td><code>libs/acp</code></td><td><code>make test</code>, <code>make lint</code>, <code>make type</code></td><td>Default tests folder includes protocol and unit subfolders.</td></tr><tr><td><code>libs/talon</code></td><td><code>make test</code>, <code>make test_bridge</code>, <code>make type</code></td><td>Test target first runs Node's WhatsApp bridge tests.</td></tr><tr><td><code>libs/evals</code></td><td><code>make test</code>, <code>make evals MODEL=...</code></td><td>Offline harness tests differ from paid/credentialed model runs.</td></tr></tbody></table></div><aside class=\"callout\"><p>These choose future checks; they are not reported verification. Respect package Python requirements first. The umbrella libs Makefile has a Python-version helper/comment that differs from current Code/Talon/evals metadata. Per-package metadata is stronger evidence than a claim that everything supports 3.12.</p></aside>",
+        "sources": [
+          {
+            "path": "libs/deepagents/Makefile",
+            "start": 5,
+            "end": 38,
+            "label": "SDK frozen/offline/integration targets"
+          },
+          {
+            "path": "libs/deepagents/Makefile",
+            "start": 70,
+            "end": 78,
+            "label": "SDK Ruff and ty"
+          },
+          {
+            "path": "libs/code/Makefile",
+            "start": 25,
+            "end": 39,
+            "label": "Code test suite boundaries"
+          },
+          {
+            "path": "libs/code/Makefile",
+            "start": 70,
+            "end": 115,
+            "label": "Code local check gauntlet"
+          },
+          {
+            "path": "libs/acp/Makefile",
+            "start": 9,
+            "end": 40,
+            "label": "ACP test and quality commands"
+          },
+          {
+            "path": "libs/talon/Makefile",
+            "start": 8,
+            "end": 34,
+            "label": "Talon pytest plus Node bridge tests"
+          },
+          {
+            "path": "libs/evals/Makefile",
+            "start": 13,
+            "end": 21,
+            "label": "Evaluation unit versus model commands"
+          },
+          {
+            "path": "libs/Makefile",
+            "start": 6,
+            "end": 8,
+            "label": "Umbrella version helper is not current package metadata"
+          },
+          {
+            "path": "libs/code/pyproject.toml",
+            "start": 13,
+            "end": 13,
+            "label": "Actual Code interpreter requirement"
+          }
+        ]
+      },
+      {
+        "id": "repo-engineering-test-map",
+        "title": "Regression tests encode narrow, valuable contracts",
+        "body": "<p>The application test map mirrors actual boundaries. The source atlas is the path-level index for those suites.</p><h3>Read the suites by application boundary</h3><ol class=\"explain-steps\"><li><strong>Code owns application and presentation checks.</strong> Code has unit/integration suites and smoke snapshots; snapshot updates are an explicit target rather than automatic acceptance of new output.</li><li><strong>Talon covers channels, persistence, and host authority.</strong> Talon has channel-specific tests, cron tests, broad runtime/host tests, unit tests for history, embeddings, pairing, OAuth, skills, background execution, and protected approvals, plus integration adapters.</li><li><strong>ACP and partners cover protocol and adapter contracts.</strong> ACP tests concentrate on protocol behavior, multimodal conversion, model switching, local context, and execution permission reuse. Partners each retain their own adapter tests.</li></ol><h3>What inspected regressions establish</h3><p>Two inspected regression examples show the kind of evidence worth carrying forward.</p><ol class=\"explain-steps\"><li><strong>Distinguish exact-request permission reuse.</strong> ACP tests assert that changing a command or its context requires another permission request and that identical canonical arguments can reuse a grant.</li><li><strong>Test trusted authority propagation.</strong> Talon tests exercise forged route metadata and prove the expected request metadata remains non-operator; scheduled and background delivery paths are expected to have no approval or authorization handler. These assertions target authority propagation, not just happy-path string output.</li></ol><aside class=\"callout\"><p>The cited source tests were inspected, not executed for this learning site. Those tests do not prove that a real Slack workspace, OAuth server, database cluster, or sandbox provider is configured correctly.</p><p>Offline fixtures can prove host routing and failure handling while missing provider behavior, account permissions, network restrictions, and deployment-specific races.</p></aside><p>When adding a capability, identify the layer where a contract changes: tool schema, graph state, middleware routing, provider adapter, host authority, persistence, or presentation. Then update tests at that boundary rather than relying on a single end-to-end model answer.</p>",
+        "sources": [
+          {
+            "path": "libs/code/Makefile",
+            "start": 19,
+            "end": 39,
+            "label": "Code smoke snapshots and suite selection"
+          },
+          {
+            "path": "libs/talon/Makefile",
+            "start": 8,
+            "end": 18,
+            "label": "Host and bridge test entrypoints"
+          },
+          {
+            "path": "libs/acp/tests/unit_tests/test_execute_permissions.py",
+            "start": 71,
+            "end": 137,
+            "label": "Exact execution-permission regression assertions"
+          },
+          {
+            "path": "libs/talon/tests/unit_tests/test_tool_approval_authorization.py",
+            "start": 79,
+            "end": 153,
+            "label": "Background, scheduled, forged metadata, and direct-call authority assertions"
+          },
+          {
+            "path": "libs/evals/tests/evals/utils.py",
+            "start": 1376,
+            "end": 1404,
+            "label": "Behavior-eval evidence differs from regression assertions"
+          }
+        ]
+      },
+      {
+        "id": "repo-engineering-evidence",
+        "title": "Read the implementation before trusting an architectural label",
+        "body": "<p>The reusable lint workflow receives a component working directory and Python version, checks out the repository, installs via the local uv setup action, runs <code>uv sync --group test</code>, then <code>make lint</code>.</p><ol class=\"explain-steps\"><li><strong>Keep CI scope explicit.</strong> Package-local commands are part of the CI contract. A green lint job is not a green unit-test job; a model-eval score is not a sandbox-isolation audit; a runnable example is not a production deployment. Keep those evidence categories separate when reviewing a change or interpreting a release.</li><li><strong>Read the revision and trace evidence correctly.</strong> This explorer is pinned to one source revision. Its traces are implementation-derived explanations, not recordings of executed provider calls. Source and test citations tell you where a claim comes from; they do not imply the cited test passed in this environment.</li><li><strong>Prefer implementation when introductory prose diverges.</strong> Openwiki, READMEs, and example comments can help orient a reader, but implementation wins when they diverge: current Code entrypoint names, NVIDIA's actual backend factory, and Talon's no-model echo path are concrete examples of that rule.</li></ol><h3>Debug from identity to external effect</h3><ol class=\"explain-steps\"><li><strong>Establish the loaded package.</strong> Establish package, import, and version.</li><li><strong>Inspect effective policy.</strong> Inspect resolved configuration and trusted context.</li><li><strong>Locate the active execution owner.</strong> Locate the active process, thread, or conversation.</li><li><strong>Trace the tool boundary.</strong> Identify the tool's backend or remote bridge.</li><li><strong>Separate state lifetimes.</strong> Inspect checkpoint state, archive state, and live-task state separately.</li><li><strong>Check the actual outcome.</strong> Finally, check the observed external effect.</li></ol><p>This order avoids blaming the model for a stale workspace binding or treating a reassuring transcript as proof of a completed write.</p><p>It also makes new contributions easier to review: describe which owner changes and which exact contract the tests establish.</p>",
+        "sources": [
+          {
+            "path": ".github/workflows/_lint.yml",
+            "start": 5,
+            "end": 15,
+            "label": "CI accepts package and Python inputs"
+          },
+          {
+            "path": ".github/workflows/_lint.yml",
+            "start": 35,
+            "end": 50,
+            "label": "CI setup and actual lint commands"
+          },
+          {
+            "path": "libs/code/pyproject.toml",
+            "start": 157,
+            "end": 159,
+            "label": "Current Code executable contract"
+          },
+          {
+            "path": "examples/nvidia_deep_agent/src/backend.py",
+            "start": 67,
+            "end": 104,
+            "label": "Actual backend rather than introductory claim"
+          },
+          {
+            "path": "libs/talon/deepagents_talon/__main__.py",
+            "start": 359,
+            "end": 394,
+            "label": "Actual no-model and model runtime selection"
+          }
+        ]
+      }
+    ]
+  }
+]

@@ -1,0 +1,312 @@
+# Verification record
+
+The [large tool-output clarification](#large-tool-output-clarification-2026-11-05) records the latest focused content update. The [readability acceptance](#current-readability-acceptance) records the preceding all-chapter and responsive-layout baseline. Earlier browser and diagram runs below are retained as history, not claims that the latest content was re-exercised across every surface.
+
+## Revision and environment
+
+- Upstream repository: https://github.com/langchain-ai/deepagents
+- Reviewed revision: `c4e2811312718e98b1465b6e67c34997ca72c793`.
+- Actual local clone: `/tmp/deepagents-study-source`.
+- Preview: `http://127.0.0.1:8793/`; served from this directory with `/home/christian/miniconda3/bin/python`.
+- Atlas generation and integrity probes used the existing Conda Python 3.12.12.
+- Diagram/capture helpers used `/tmp/deepagents-diagram-venv/bin/python`, whose `sys.base_prefix` is `/home/christian/miniconda3`. Pillow and Playwright were installed only in that isolated Conda-based environment, not in system Python.
+- Browser checks used real Chromium through the browser tool and the Conda-based Playwright environment. These were ad-hoc functional/visual checks, not an upstream test-suite run.
+
+## Large tool-output clarification (2026-11-05)
+
+Public preview: **https://doctors-receptor-suzuki-reality.trycloudflare.com/**. The preceding Quick Tunnel stopped resolving and reported `Unauthorized: Tunnel not found`; a replacement HTTP/2 tunnel registered and serves the unchanged Conda-Python origin. Both processes were left running. The public hostname is temporary.
+
+### Scope and source grounding
+
+- Expanded `sdk-filesystem-text-offload` into a worked 400,000-character / approximately 100K-token example, with an explicitly assumed 100K model profile. Token estimates are distinguished from actual tokenization and from the earlier 100,000-character scale.
+- Added a Python-highlighted paging argument block, five numbered execution steps, a size comparison, and visible cautions about full-result summarization, exhaustive reading, application memory, failed writes, disabled eviction, non-text media, and storage lifetime.
+- Added a cross-linked budget example in `sdk-context-overflow`: 100,000 advertised input tokens, 12,000 configured output tokens, and 5% headroom produce an 83,000-token usable input budget. These are illustrative settings, not universal provider limits.
+- Preserved all 23 chapter IDs and 105 section IDs. Added six pinned implementation citations and extended the eviction-exclusion citation through `delete`.
+
+### Exercised checks
+
+| Check | Observed result |
+| --- | --- |
+| Content and citation validation using Conda Python | All three chapter JSON files parsed; all 572 citation paths/ranges valid against the pinned atlas; section IDs unique |
+| Added source references | Six added citation entries matched SHA-256-verified pinned source blobs |
+| Example syntax | All ten full snippets parsed: eight Python with `ast.parse`, two Bash with `bash -n`; not model execution |
+| Internal chapter references | All four authored chapter/section links resolved to existing content |
+| Changed chapters at 1440×1080 and 390×844 | Both offload and context chapters rendered; no document-level overflow |
+| New comparisons | Three offload rows and four budget rows; mobile tables fit at 344 CSS px and expose visible field labels; offload cells retain header associations |
+| Offload flow and Python block | Five numbered steps; 15 syntax-token spans; Copy placed the exact argument block on the browser clipboard |
+| Reference material | Existing offload disclosure opened through its control |
+| Linked explanation | Followed offload → context, context → offload, and offload → state-storage links |
+| Search | `100K` found both revised sections; selecting the offload result closed the dialog |
+| Source atlas | Followed the new preview/paging citation to `_message_eviction.py`, lines 31–52, and observed its source content |
+| Page exceptions | None recorded during these browser exercises |
+| Published chapter integrity | HTTP 200; public `content/sdk.json` matched local bytes, SHA-256 `b11f57d9fc4eb21c899548fd0540caaec18333609cc96af73639c2b6219aaa26` |
+
+Visual evidence inspected:
+
+- [Desktop offload explanation](evidence/large-output-desktop.png)
+- [Mobile size-comparison cards](evidence/large-output-mobile.png)
+- [Mobile input-budget example](evidence/large-output-budget-mobile.png)
+
+These were ad-hoc website and content checks, not a permanent test suite or a live 100K-token tool/model run. No diagrams, application JavaScript, or styles changed; earlier diagram scores were not rerun. The browser tab was closed after verification. No commits or GitHub Pages deployment were made.
+
+## Content and provenance checks
+
+| Check | Observed result |
+| --- | --- |
+| Chapter identifiers and section identifiers | Unique |
+| Authored chapter/section counts | 23 chapters / 105 sections |
+| Chapter source citations | All 572 paths and inclusive line ranges valid after the large tool-output clarification |
+| Walkthrough source citations | All 39 paths and inclusive line ranges valid |
+| Embedded source integrity | All 1,705 text blobs matched SHA-256 metadata from the pinned Git archive |
+| Python source coverage | All 1,233 `.py` files in the pinned Git tree were present |
+| Python indexing | 30,338 definitions; zero parse diagnostics |
+| Conda Python 3.12 compatibility probe | Python 3.14 bare exception tuples indexed without modifying source content or definition line numbers |
+| Source export behavior | Reads immutable Git archive blobs; does not read mutable working-tree/index source |
+| Independent factual checks | SDK/backend/application claims reviewed against implementation, metadata and representative tests; identified corrections integrated |
+
+The revised content mixes short prose, numbered explanations, and comparison tables. Section citations support implementation explanations; they are not a guarantee that every sentence or every upstream behavior has been exhaustively proved.
+
+## Initial browser exercises
+
+| Surface | Exercised behavior | Result |
+| --- | --- | --- |
+| All 23 chapters, desktop | Correct heading, expected section counts, 540 rendered source links, no document-level horizontal overflow | Passed |
+| All 23 chapters, 390×844 | Correct chapter rendering, no document-level horizontal overflow, no page errors | Passed |
+| Search | Search `checkpoint`, follow a result to its section, close the dialog after selection | Passed; 22 matching sections observed |
+| Keyboard search | `Ctrl K` opens; Escape closes | Passed |
+| Skip link | Keyboard activation focuses existing main content without changing the hash route | Passed |
+| Theme | Toggle light → dark → light | Passed |
+| Mobile navigation | Open, select a chapter, close after selection; Escape restores focus; collapsed sidebar is hidden from keyboard navigation | Passed |
+| Copy control | Copy a chapter code block | Passed; `Code copied` observed |
+| Execution lab | Visit all 7 file-write, 5 approval and 6 delegation steps | Passed |
+| Walkthrough keyboard | Activate Next repeatedly with Enter; focus survives replacement; Next disables at the final step | Passed |
+| Numeric route boundary | Fractional walkthrough index normalizes to an integer | Passed |
+| Approval projection | All four decisions, including `respond`, visible in the relevant state | Passed |
+| Source citation | Follow a chapter citation; correct pinned source and highlighted range | Passed; 62 highlighted lines for a 62-line citation |
+| Atlas search/filter | Search `DeepAgentRuntime`, open its Talon source, use package and test filters | Passed |
+| Definition jump | Select `create_deep_agent` at line 289 | Passed |
+| Source paging | Advance from lines 264–613 to 614–963 | Passed; bounded 350-line window |
+| Source numeric boundary | Fractional requested lines render integer line labels | Passed |
+| Selected-line visibility | Highlighted line 289 positioned about 80 px below the source viewport top | Passed |
+| Empty file | Open `libs/deepagents/tests/__init__.py` | `Empty file · 0 bytes`; no invalid range label |
+| Malformed route | Open `#/chapter/%` | Not-found surface rendered without a page error |
+| Narrow diagram panels | Panel scrolls horizontally via keyboard; document itself does not overflow | Passed |
+
+Screenshots inspected:
+
+- [Desktop home](evidence/desktop-home.png)
+- [Desktop chapter](evidence/desktop-chapter.png)
+- [Source atlas](evidence/desktop-source.png)
+- [Execution walkthrough](evidence/desktop-walkthrough.png)
+- [Mobile home](evidence/mobile-home.png)
+
+A stale in-memory content snapshot was found during authoring and resolved by reloading before the full chapter sweep. Browser-tool raw source-page screenshot calls timed out; the source and walkthrough captures were subsequently produced successfully using Conda-based Playwright. No source-view interaction failure or page exception was observed in those checks. The screenshot limitation is not reported as a passed browser-tool capture.
+
+## GDP Labs diagram validation
+
+**Evidence classification:** geometry/margins are script-backed; G1/G2/G4/G5/G6/G7/G8 are script-assisted where perception is required; architecture meaning and cold-read G9 are visual/manual-only. Visual evidence is the latest rendered PNGs, cropped target-width fit-check PNGs, and live website inspection—not source-only approval.
+
+**Target:** web article diagram at 660 CSS px. The overview also appears at a smaller hero width, with 26 px source detail text and a 360 px minimum image width. Narrow screens use local horizontal scrolling, with an explicit cue and keyboard-focusable panels, rather than unreadably shrinking the diagrams.
+
+**Profile:** canonical `profiles/compact-flow.json`; helper `--fit-width 660`. No relaxed request-specific profile was used.
+
+### Evidence bundle
+
+| Diagram | Editable source | Rendered image | Target-width preview | Helper outputs |
+| --- | --- | --- | --- | --- |
+| Layering | [layers.svg](diagrams/layers.svg) | [layers.png](diagrams/layers.png) | [layers.fitcheck.png](diagrams/layers.fitcheck.png) | [heuristics](diagrams/layers.heuristics.txt), [margins](diagrams/layers.margin.txt), [fit margins](diagrams/layers.fitcheck.margin.txt) |
+| Tool loop | [execution.svg](diagrams/execution.svg) | [execution.png](diagrams/execution.png) | [execution.fitcheck.png](diagrams/execution.fitcheck.png) | [heuristics](diagrams/execution.heuristics.txt), [margins](diagrams/execution.margin.txt), [fit margins](diagrams/execution.fitcheck.margin.txt) |
+
+The canonical fit-check helper preserves a 1,200 px viewport height. Its unused bottom-only whitespace was cropped with Pillow, preserving the 660 px displayed diagram width and 16 px wrapper padding. Final previews are 692×522 and 692×462. All measured final-preview margins are below 10%; all final SVG heuristic warning buckets are zero. The helpers recognized both layer connectors and all four loop connectors, including the return route.
+
+### Pass 1 — Composition
+
+| Rule | Layers | Execution loop | Acceptance evidence |
+| --- | --- | --- | --- |
+| G1 — Fit/readability | Green | Green | Latest fit previews inspected; legible labels, efficient crop, web minimum widths |
+| G2 — Header/text economy | Green | Green | One layer label per card; one harness-boundary title; detail stays outside visuals |
+| G5 — Route balance | Green | Green | Centered straight layer arrows; local forward path and secondary return route |
+| G6 — Color semantics | Green | Green | Restrained canonical blue/neutral palette; solid directional connectors; labels carry meaning |
+| G8 — Alignment/spacing | Green | Green | Stable rails, consistent role heights, no overlap/rail/spacing warnings |
+| G9 — Semantic completeness | Green | Green | Layer diagram shows construction/runtime layering, not separate services. Loop shows proposed calls, harness control, actual tool effects, and results returning to the next decision. Backend/API connector is request/response, not a claim of universal sandboxing. |
+
+### Pass 2 — Mechanics
+
+| Rule | Layers | Execution loop | Acceptance evidence |
+| --- | --- | --- | --- |
+| G3 — Geometry/arrowheads | Green | Green | Straight/orthogonal routes, compact solid markers; zero diagonal/marker warnings |
+| G4 — Anchoring/clearance | Green | Green | Anchored endpoints, no title/label collisions, traceable return path; helper and visual inspection |
+| G7 — Containment/padding | Green | Green | No overflow warnings; text visibly contained in latest fit-check images |
+
+### Resolved findings from validation rounds
+
+- `G7 -> layer and execution labels -> inherited text anchoring was invisible to the heuristic parser, and several execution labels were too long -> high; resolved with explicit anchors and shorter labels, then re-rendered and checked.`
+- `G8 -> layer cards -> unequal heights for equal-role two-line cards -> medium; resolved with equal heights.`
+- `G8 -> execution boundary -> unused lower container slack -> medium; resolved by tightening the boundary and return route.`
+- `G1 -> fit-check previews -> helper viewport introduced excessive blank space below the diagram -> medium; resolved by bottom-only crop, preserving target width, and fresh margin reports.`
+
+No red/yellow findings remain in the latest artifacts. These rules validate visual communication; source grounding is a separate check.
+
+## Authored-code checks
+
+Executed from this directory:
+
+```bash
+node --check app.js
+node --check walkthrough.js
+ruff check build_source_index.py
+ruff format --check build_source_index.py
+ruff check --select C901 build_source_index.py
+```
+
+All passed after the exporter import-order fix. The exporter itself was run successfully against the actual clone and produced the delivered manifest/bundles. The integrity and compatibility probes were executed with Conda Python without importing upstream application code.
+
+## Limits
+
+- No Deep Agents upstream unit, integration, evaluation, model-provider, sandbox-provider, MCP-server or deployed-service suite was executed. No pass is claimed for those systems.
+- Walkthrough values and code snippets are labeled illustrative; the lab is not a live agent or a fabricated execution transcript.
+- The guided text is not a line-by-line explanation of every source file. Full tracked Python implementation and test source is available in the atlas for deeper investigation.
+- The pinned revision does not update automatically with upstream `main`.
+- The origin binds only to loopback. A temporary, unauthenticated Cloudflare Quick Tunnel exposes the site publicly while both processes and this workstation remain running; this is not a production deployment or uptime guarantee.
+
+## Initial readability and syntax-highlighting revision
+
+### Content checks
+
+- All 23 chapters / 105 sections retained their IDs, titles, group, ordering, metadata and existing citations.
+- The native-streaming section gained two verified implementation references for the explicit event-contract table. Chapter citations now total 542; the 39 walkthrough references are unchanged.
+- All four authored example blocks are text-identical to the previous version: three Python, one Bash.
+- 101 sections now include numbered explanations. Fifteen comparison tables remain across the chapter collections; the four sections without ordered lists use reference/comparison tables.
+- The longest explanatory paragraph measured 55 words; the longest numbered point measured 70 words. These are structure/length checks, not a readability certification by themselves.
+- Manual spot checks compared the original and revised pagination, exact-edit, compaction/recovery, backend-capability and application-process descriptions. Combined code tokens such as `next_offset=end_line` and `file_path=None` retain the original edge-case semantics.
+
+### Exercised syntax behavior
+
+- All four authored code blocks rendered colored tokens with their explicit language labels; every original example text matched the displayed code after highlighting.
+- All 18 walkthrough states rendered as highlighted, parseable JSON rather than being mislabeled Python.
+- Python source view retained 350-line windows, definition/line links, and highlighting after paging.
+- A window beginning inside `graph.py`'s multiline docstring kept nonblank line 403 inside a string token, not keyword tokens.
+- A source round-trip probe preserved newlines, Unicode non-breaking space, Python f-string text, and `<script>` literally without introducing a script element.
+- The largest Python source file, `libs/code/deepagents_code/app.py` (1,439,000 bytes / 33,320 lines), rendered the requested 350-line colored window with 843 token spans. This is not a performance benchmark or latency guarantee.
+- Code copying still produced the observed `Code copied` confirmation through the public HTTPS site.
+- Public source inspection confirmed 350 rendered lines, 485 token spans and the expected docstring token. A timed selector wait on that public source view expired once; subsequent direct inspection confirmed it loaded without a page exception. Large package bundles can take longer to transfer through a temporary tunnel.
+- `node --check` passed for `app.js`, `syntax.js`, `chapter-diagrams.js`, `walkthrough.js`, and the vendored grammar bundle.
+
+### Revised website smoke checks
+
+Fresh Chromium scans at both 1440×1000 and 390×844 visited every chapter:
+
+- 23 chapters and all 105 section containers rendered at each width.
+- All five newly embedded chapter diagrams loaded at each width.
+- No document-level horizontal overflow and no page errors were observed.
+- The public Cloudflare route was exercised across all chapters, event-contract content, copying, and colored Python source.
+
+Latest visually inspected captures:
+
+- [Readable desktop chapter](evidence/readable-chapter.png)
+- [State/data-flow chapter](evidence/state-flow-chapter.png)
+- [Python highlighting](evidence/python-highlight.png)
+- [Readable mobile chapter](evidence/mobile-readable-chapter.png)
+
+### New diagram evidence and two-pass scoring
+
+Evidence classification: script-backed geometry/margins; script-assisted fit, padding and layout; visual/manual-only semantic cold-read. Visual evidence is each latest rendered PNG and 660 px fit-check plus the live chapter surface.
+
+All new diagrams use the canonical compact-flow profile with `--fit-width 660`. Fit previews use 8 px wrapper padding; the helper's unused viewport below the image was cropped without resizing the displayed diagram. Final margins are below 10%, and all SVG heuristic warning buckets are zero.
+
+| Diagram | Source | Render | Fit check | Helper evidence |
+| --- | --- | --- | --- | --- |
+| Construction | [SVG](diagrams/construction.svg) | [PNG](diagrams/construction.png) | [Fit](diagrams/construction.fitcheck.png) | [Geometry](diagrams/construction.heuristics.txt), [margins](diagrams/construction.margin.txt), [fit margins](diagrams/construction.fitcheck.margin.txt) |
+| State/data cycle | [SVG](diagrams/state-flow.svg) | [PNG](diagrams/state-flow.png) | [Fit](diagrams/state-flow.fitcheck.png) | [Geometry](diagrams/state-flow.heuristics.txt), [margins](diagrams/state-flow.margin.txt), [fit margins](diagrams/state-flow.fitcheck.margin.txt) |
+| Inline delegation | [SVG](diagrams/delegation.svg) | [PNG](diagrams/delegation.png) | [Fit](diagrams/delegation.fitcheck.png) | [Geometry](diagrams/delegation.heuristics.txt), [margins](diagrams/delegation.margin.txt), [fit margins](diagrams/delegation.fitcheck.margin.txt) |
+| Backend routing | [SVG](diagrams/routing.svg) | [PNG](diagrams/routing.png) | [Fit](diagrams/routing.fitcheck.png) | [Geometry](diagrams/routing.heuristics.txt), [margins](diagrams/routing.margin.txt), [fit margins](diagrams/routing.fitcheck.margin.txt) |
+| Code process split | [SVG](diagrams/code-processes.svg) | [PNG](diagrams/code-processes.png) | [Fit](diagrams/code-processes.fitcheck.png) | [Geometry](diagrams/code-processes.heuristics.txt), [margins](diagrams/code-processes.margin.txt), [fit margins](diagrams/code-processes.fitcheck.margin.txt) |
+
+**Pass 1 — Composition:** G1, G2, G5, G6, G8 and G9 are green for all five new diagrams. Labels are legible at fit width; headers and category colors are restrained; related boxes are aligned; each figure answers a distinct question. The state cycle is explicitly conceptual rather than the compiled graph topology, routing explicitly chooses one branch, and the backend in the Code figure is not falsely labeled a separate process.
+
+**Pass 2 — Mechanics:** G3, G4 and G7 are green for all five new diagrams. Routes are straight/orthogonal with compact markers, anchored endpoints and no label collisions or text overflow in the final renders.
+
+Resolved validation findings:
+
+- `G5 -> state-cycle return -> long two-bend return dominated a vertical layout -> medium; replaced by a compact clockwise cycle with direct connectors.`
+- `G8 -> routing rows -> unequal phase spacing exaggerated the branch gap -> medium; balanced the row gaps and regenerated the render.`
+- `G1 -> state and Code fit previews -> wrapper/canvas margin slightly exceeded 10% -> low; tightened fit wrapper padding, preserved 660 px diagram width, and reran margin checks.`
+
+No red/yellow findings remained in that 660 px diagram set. The original layer/tool-loop figures were unchanged by that formatting pass; current narrow-screen acceptance follows below.
+
+## Current readability acceptance
+
+### Content and factual validation
+
+- All 23 chapters were meaningfully revised; all 105 section IDs remain. Existing citation targets and substantive baseline coverage were retained. Sections were reordered where necessary to teach the concept before its implementation.
+- The state chapter now defines state, reducers and checkpoints before delta-channel mechanics, includes message-ID before/after examples, and moves context projections earlier. Streaming introductions are separated from advanced adapter contracts.
+- Concrete illustrative examples cover file reads/offload, child inputs and reports, background thread/run identities, skill disclosure, compaction, storage lifetimes, routing, permissions, configuration precedence and application ownership.
+- Independent source-based reviews covered all 105 sections. Integrated corrections include invocation-time virtual-file seeding, shared checkpoint-storage requirements across ACP rebuilds, headless shell rules versus exposed file tools, and the content-builder YAML mapping shape.
+- All 566 final chapter citations have existing source paths and valid inclusive line ranges. The upstream pin and source atlas were not changed.
+- Seven Python examples passed Conda Python AST parsing; two Bash examples passed `bash -n`. These were syntax-only checks, not model executions.
+
+### Actual public website verification
+
+Public preview: **https://higher-preferred-postings-generation.trycloudflare.com/**.
+
+The old temporary hostname stopped resolving and its tunnel failed to reconnect after a network interruption. A replacement HTTP/2 tunnel registered successfully and serves the existing Conda-Python origin at `127.0.0.1:8793`. The replacement tunnel and origin were left running. Quick Tunnels remain temporary and require these processes and network connectivity.
+
+| Exercise | Observed result |
+| --- | --- |
+| All chapters at 1440×1080 and 390×844 | 46 successful chapter views; expected section IDs; 16 px chapter prose; no page exceptions or document overflow |
+| All 26 comparison tables | No table overflow; header associations and visual field labels present; narrow-screen rows become readable cards |
+| All nine example blocks | Highlighted tokens and original authored text preserved at both widths |
+| Seven diagram topics at 360 px and 768 px | All 14 views selected the compact source, preserved its aspect ratio, and fit without panel or document overflow |
+| Reference disclosure | Opened and closed through its actual control |
+| Search | Searched `memory_contents`, followed the result to the memory section, and observed dialog closure |
+| Theme | Toggled dark and light |
+| Copy | Clipboard text exactly matched the complete Python constructor example |
+| Mobile navigation | Selected a chapter and observed the menu collapse |
+| Narrow table semantics | Table, rowgroup, columnheader and cell roles retained; duplicate visual labels are hidden from the accessibility tree |
+| Source citation | Opened `graph.py` and observed all four requested source lines highlighted |
+| Execution lab | Exercised all 18 steps across the three illustrative scenarios |
+| Public asset integrity | All 13 changed application/content/compact-SVG assets matched local SHA-256 content |
+| Authored JavaScript | `node --check` passed for app, diagram metadata, syntax helper and walkthrough modules |
+
+Full browser captures/contact sheets were inspected across all chapters. Representative durable captures:
+
+- [Concept-first state introduction](evidence/revised-state-desktop.png)
+- [Complete mobile state cycle](evidence/revised-state-mobile.png)
+- [Mobile provider-comparison cards](evidence/revised-table-mobile.png)
+- [Highlighted example with seeded virtual file](evidence/revised-constructor-code.png)
+- [Machine-readable checks](evidence/readability-revision-checks.json)
+
+The chapter capture sweep used reduced-motion preferences to avoid screenshots of in-progress smooth scrolling. This was an ad-hoc website smoke/visual run, not a new permanent test suite or a learner usability study.
+
+### Compact diagram evidence and scoring
+
+**Evidence classification:** geometry, effective text size and margins are script-backed; fit/layout judgment is script-assisted; conceptual meaning is visual/manual-only. Evidence is the rendered PNGs, 288 px fit previews, and actual website screenshots at desktop and narrow widths.
+
+Each compact SVG has a 320 px source canvas and 18–20 px essential labels. At the conservative 288 px fit width, the smallest labels are 16.2 px. The fit helper's unused 1200 px viewport surplus was cropped to the complete source-canvas aspect ratio without resizing its displayed contents. Source and fit-preview margin reports have no warnings.
+
+| Topic | Source | Render | Fit preview | Supporting reports |
+| --- | --- | --- | --- | --- |
+| Layers | [SVG](diagrams/layers-mobile.svg) | [PNG](diagrams/layers-mobile.png) | [Fit](diagrams/layers-mobile.fitcheck.png) | [Geometry](diagrams/layers-mobile.heuristics.txt), [margins](diagrams/layers-mobile.margin.txt), [fit margins](diagrams/layers-mobile.fitcheck.margin.txt) |
+| Tool loop | [SVG](diagrams/execution-mobile.svg) | [PNG](diagrams/execution-mobile.png) | [Fit](diagrams/execution-mobile.fitcheck.png) | [Geometry](diagrams/execution-mobile.heuristics.txt), [margins](diagrams/execution-mobile.margin.txt), [fit margins](diagrams/execution-mobile.fitcheck.margin.txt) |
+| Construction | [SVG](diagrams/construction-mobile.svg) | [PNG](diagrams/construction-mobile.png) | [Fit](diagrams/construction-mobile.fitcheck.png) | [Geometry](diagrams/construction-mobile.heuristics.txt), [margins](diagrams/construction-mobile.margin.txt), [fit margins](diagrams/construction-mobile.fitcheck.margin.txt) |
+| State cycle | [SVG](diagrams/state-flow-mobile.svg) | [PNG](diagrams/state-flow-mobile.png) | [Fit](diagrams/state-flow-mobile.fitcheck.png) | [Geometry](diagrams/state-flow-mobile.heuristics.txt), [margins](diagrams/state-flow-mobile.margin.txt), [fit margins](diagrams/state-flow-mobile.fitcheck.margin.txt) |
+| Delegation | [SVG](diagrams/delegation-mobile.svg) | [PNG](diagrams/delegation-mobile.png) | [Fit](diagrams/delegation-mobile.fitcheck.png) | [Geometry](diagrams/delegation-mobile.heuristics.txt), [margins](diagrams/delegation-mobile.margin.txt), [fit margins](diagrams/delegation-mobile.fitcheck.margin.txt) |
+| Routing | [SVG](diagrams/routing-mobile.svg) | [PNG](diagrams/routing-mobile.png) | [Fit](diagrams/routing-mobile.fitcheck.png) | [Geometry](diagrams/routing-mobile.heuristics.txt), [margins](diagrams/routing-mobile.margin.txt), [fit margins](diagrams/routing-mobile.fitcheck.margin.txt) |
+| Code ownership | [SVG](diagrams/code-processes-mobile.svg) | [PNG](diagrams/code-processes-mobile.png) | [Fit](diagrams/code-processes-mobile.fitcheck.png) | [Geometry](diagrams/code-processes-mobile.heuristics.txt), [margins](diagrams/code-processes-mobile.margin.txt), [fit margins](diagrams/code-processes-mobile.fitcheck.margin.txt) |
+
+**Pass 1 — Composition:** G1, G2, G5, G6, G8 and G9 are green. Entire flows are visible without sideways panning; labels remain readable; exclusive routing is explicit; the tool loop retains its harness boundary; the Code backend is a capability boundary rather than necessarily a third process.
+
+**Pass 2 — Mechanics:** G3, G4 and G7 are green. Orthogonal connectors, compact arrowheads, anchored endpoints and internal label padding passed rendered inspection. No text-overflow, collision, diagonal or effective-text warnings remain.
+
+Heuristic dispositions, not suppressed warnings:
+
+- `G4/G5/G8 -> execution-mobile feedback return -> helper flags the long two-bend route -> informational, accepted after visual review.` It represents the real tool-result return, occupies a dedicated clear rail, and is visually secondary.
+- `G4/G5/G8 -> state-flow-mobile iteration return -> helper flags the long two-bend route -> informational, accepted after visual review.` It represents the real next-iteration cycle rather than a layout-only bus; removing it would lose the loop relationship.
+- `G7 -> routing-mobile option label -> conservative text estimate flagged a long single line -> resolved by wrapping the label and regenerating all routing evidence.`
+- `G1 -> narrow fit previews -> unused helper viewport created excessive bottom whitespace -> resolved by cropping only surplus viewport area and rerunning margin reports.`
+
+No unresolved red/yellow visual findings remain in the compact set. The seven desktop source diagrams were retained unchanged.
+
+### Verification boundary
+
+The source-grounded examples remain illustrative. No upstream model/provider/integration suite was run, and no upstream application success or universal learner-comprehension claim is made. No commits were created.

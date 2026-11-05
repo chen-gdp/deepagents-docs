@@ -1,0 +1,5 @@
+FILE: /home/christian/Projects/GAT/ai-agent/docs/deepagents-explorer/diagrams/execution.png
+  size: 1520x990
+  content bbox: x=38..1481, y=58..931
+  margins px: top=58, bottom=58, left=38, right=38
+  margins %: top=5.9, bottom=5.9, left=2.5, right=2.5

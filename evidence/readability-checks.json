@@ -1,0 +1,193 @@
+{
+  "chapters": 23,
+  "sections": 105,
+  "collections": [
+    {
+      "file": "sdk",
+      "chapters": 9,
+      "sections": 43,
+      "orderedSections": 41,
+      "tables": 5,
+      "maxParagraphWords": 51,
+      "maxItemWords": 64,
+      "oldWords": 10263,
+      "newWords": 8981
+    },
+    {
+      "file": "backends",
+      "chapters": 6,
+      "sections": 26,
+      "orderedSections": 26,
+      "tables": 5,
+      "maxParagraphWords": 55,
+      "maxItemWords": 70,
+      "oldWords": 7461,
+      "newWords": 6687
+    },
+    {
+      "file": "applications",
+      "chapters": 8,
+      "sections": 36,
+      "orderedSections": 34,
+      "tables": 5,
+      "maxParagraphWords": 50,
+      "maxItemWords": 62,
+      "oldWords": 7660,
+      "newWords": 8889
+    }
+  ],
+  "metadataAndExampleChanges": [],
+  "chapterCitationRangesValidated": 542,
+  "walkthroughCitationRanges": 39,
+  "syntaxExamples": [
+    {
+      "section": "sdk-layers-planning",
+      "language": "python",
+      "tokens": 18
+    },
+    {
+      "section": "sdk-knowledge-pins",
+      "language": "python",
+      "tokens": 26
+    },
+    {
+      "section": "sdk-profiles-debugging",
+      "language": "python",
+      "tokens": 39
+    },
+    {
+      "section": "eval-harness-runner",
+      "language": "bash",
+      "tokens": 15
+    }
+  ],
+  "highlightedWalkthroughStates": 18,
+  "viewports": [
+    {
+      "width": 1440,
+      "height": 1000,
+      "chaptersChecked": 23,
+      "chapterDiagramsLoaded": 5,
+      "pageErrors": 0,
+      "horizontalPageOverflow": false
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "chaptersChecked": 23,
+      "chapterDiagramsLoaded": 5,
+      "pageErrors": 0,
+      "horizontalPageOverflow": false
+    }
+  ],
+  "newDiagrams": [
+    {
+      "name": "construction",
+      "width": 660,
+      "height": 630,
+      "fitWidth": 660,
+      "composition": [
+        "G1",
+        "G2",
+        "G5",
+        "G6",
+        "G8",
+        "G9"
+      ],
+      "mechanics": [
+        "G3",
+        "G4",
+        "G7"
+      ],
+      "status": "passed",
+      "visualEvidence": "diagrams/construction.fitcheck.png"
+    },
+    {
+      "name": "state-flow",
+      "width": 760,
+      "height": 395,
+      "fitWidth": 660,
+      "composition": [
+        "G1",
+        "G2",
+        "G5",
+        "G6",
+        "G8",
+        "G9"
+      ],
+      "mechanics": [
+        "G3",
+        "G4",
+        "G7"
+      ],
+      "status": "passed",
+      "visualEvidence": "diagrams/state-flow.fitcheck.png"
+    },
+    {
+      "name": "delegation",
+      "width": 660,
+      "height": 630,
+      "fitWidth": 660,
+      "composition": [
+        "G1",
+        "G2",
+        "G5",
+        "G6",
+        "G8",
+        "G9"
+      ],
+      "mechanics": [
+        "G3",
+        "G4",
+        "G7"
+      ],
+      "status": "passed",
+      "visualEvidence": "diagrams/delegation.fitcheck.png"
+    },
+    {
+      "name": "routing",
+      "width": 760,
+      "height": 615,
+      "fitWidth": 660,
+      "composition": [
+        "G1",
+        "G2",
+        "G5",
+        "G6",
+        "G8",
+        "G9"
+      ],
+      "mechanics": [
+        "G3",
+        "G4",
+        "G7"
+      ],
+      "status": "passed",
+      "visualEvidence": "diagrams/routing.fitcheck.png"
+    },
+    {
+      "name": "code-processes",
+      "width": 760,
+      "height": 385,
+      "fitWidth": 660,
+      "composition": [
+        "G1",
+        "G2",
+        "G5",
+        "G6",
+        "G8",
+        "G9"
+      ],
+      "mechanics": [
+        "G3",
+        "G4",
+        "G7"
+      ],
+      "status": "passed",
+      "visualEvidence": "diagrams/code-processes.fitcheck.png"
+    }
+  ],
+  "publicUrl": "https://premium-enemies-soccer-shared.trycloudflare.com",
+  "publicAssetResponses": "36 checked assets returned HTTP 200",
+  "limits": "No upstream provider/model/integration tests executed; execution walkthroughs are illustrative."
+}

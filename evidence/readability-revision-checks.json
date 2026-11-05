@@ -1,0 +1,1703 @@
+{
+  "revision": "c4e2811312718e98b1465b6e67c34997ca72c793",
+  "publicBase": "https://higher-preferred-postings-generation.trycloudflare.com/",
+  "chapters": 23,
+  "sections": 105,
+  "citations": 566,
+  "invalidCitations": [],
+  "changedChapters": 23,
+  "chapterViews": [
+    {
+      "number": 1,
+      "chapter": "sdk-layers",
+      "width": 1440,
+      "denseSection": "sdk-layers-construction",
+      "sectionIds": [
+        "sdk-layers-ownership",
+        "sdk-layers-construction",
+        "sdk-layers-planning",
+        "sdk-layers-public-api"
+      ],
+      "font": "16px",
+      "documentOverflow": false,
+      "tables": [],
+      "figures": [],
+      "code": [
+        {
+          "language": "language-python",
+          "tokens": 18
+        }
+      ],
+      "details": 1
+    },
+    {
+      "number": 2,
+      "chapter": "app-packages",
+      "width": 1440,
+      "denseSection": "app-packages-boundaries",
+      "sectionIds": [
+        "app-packages-boundaries",
+        "app-packages-dependency-direction",
+        "app-packages-scope"
+      ],
+      "font": "16px",
+      "documentOverflow": false,
+      "tables": [
+        {
+          "role": "table",
+          "display": "table",
+          "rows": 5,
+          "unlabelled": 0,
+          "overflow": false,
+          "firstCardWidth": 788
+        }
+      ],
+      "figures": [],
+      "code": [],
+      "details": 0
+    },
+    {
+      "number": 3,
+      "chapter": "sdk-construction",
+      "width": 1440,
+      "denseSection": "sdk-construction-parameters",
+      "sectionIds": [
+        "sdk-construction-parameters",
+        "sdk-construction-models",
+        "sdk-construction-prompts",
+        "sdk-construction-stack",
+        "sdk-construction-child-defaults"
+      ],
+      "font": "16px",
+      "documentOverflow": false,
+      "tables": [
+        {
+          "role": "table",
+          "display": "table",
+          "rows": 8,
+          "unlabelled": 0,
+          "overflow": false,
+          "firstCardWidth": 788
+        }
+      ],
+      "figures": [
+        {
+          "src": "https://higher-preferred-postings-generation.trycloudflare.com/diagrams/construction.svg",
+          "width": 738,
+          "overflow": false
+        }
+      ],
+      "code": [
+        {
+          "language": "language-python",
+          "tokens": 50
+        }
+      ],
+      "details": 1
+    },
+    {
+      "number": 4,
+      "chapter": "sdk-state",
+      "width": 1440,
+      "denseSection": "sdk-state-streaming",
+      "sectionIds": [
+        "sdk-state-channel",
+        "sdk-state-projections",
+        "sdk-state-schemas",
+        "sdk-state-hitl",
+        "sdk-state-streaming"
+      ],
+      "font": "16px",
+      "documentOverflow": false,
+      "tables": [
+        {
+          "role": "table",
+          "display": "table",
+          "rows": 3,
+          "unlabelled": 0,
+          "overflow": false,
+          "firstCardWidth": 788
+        },
+        {
+          "role": "table",
+          "display": "table",
+          "rows": 3,
+          "unlabelled": 0,
+          "overflow": false,
+          "firstCardWidth": 788
+        },
+        {
+          "role": "table",
+          "display": "table",
+          "rows": 2,
+          "unlabelled": 0,
+          "overflow": false,
+          "firstCardWidth": 746
+        }
+      ],
+      "figures": [
+        {
+          "src": "https://higher-preferred-postings-generation.trycloudflare.com/diagrams/state-flow.svg",
+          "width": 738,
+          "overflow": false
+        }
+      ],
+      "code": [],
+      "details": 2
+    },
+    {
+      "number": 5,
+      "chapter": "sdk-filesystem",
+      "width": 1440,
+      "denseSection": "sdk-filesystem-text-offload",
+      "sectionIds": [
+        "sdk-filesystem-tools",
+        "sdk-filesystem-read",
+        "sdk-filesystem-mutations",
+        "sdk-filesystem-text-offload",
+        "sdk-filesystem-media"
+      ],
+      "font": "16px",
+      "documentOverflow": false,
+      "tables": [],
+      "figures": [],
+      "code": [],
+      "details": 1
+    },
+    {
+      "number": 6,
+      "chapter": "sdk-delegation",
+      "width": 1440,
+      "denseSection": "sdk-delegation-isolation",
+      "sectionIds": [
+        "sdk-delegation-specs",
+        "sdk-delegation-isolation",
+        "sdk-delegation-forks",
+        "sdk-delegation-results"
+      ],
+      "font": "16px",
+      "documentOverflow": false,
+      "tables": [
+        {
+          "role": "table",
+          "display": "table",
+          "rows": 3,
+          "unlabelled": 0,
+          "overflow": false,
+          "firstCardWidth": 788
+        }
+      ],
+      "figures": [
+        {
+          "src": "https://higher-preferred-postings-generation.trycloudflare.com/diagrams/delegation.svg",
+          "width": 738,
+          "overflow": false
+        }
+      ],
+      "code": [],
+      "details": 2
+    },
+    {
+      "number": 7,
+      "chapter": "sdk-background",
+      "width": 1440,
+      "denseSection": "sdk-background-status",
+      "sectionIds": [
+        "sdk-background-launch",
+        "sdk-background-status",
+        "sdk-background-update",
+        "sdk-background-notifications"
+      ],
+      "font": "16px",
+      "documentOverflow": false,
+      "tables": [
+        {
+          "role": "table",
+          "display": "table",
+          "rows": 4,
+          "unlabelled": 0,
+          "overflow": false,
+          "firstCardWidth": 788
+        }
+      ],
+      "figures": [],
+      "code": [],
+      "details": 1
+    },
+    {
+      "number": 8,
+      "chapter": "sdk-knowledge",
+      "width": 1440,
+      "denseSection": "sdk-knowledge-tool-disclosure",
+      "sectionIds": [
+        "sdk-knowledge-memory",
+        "sdk-knowledge-discovery",
+        "sdk-knowledge-pins",
+        "sdk-knowledge-tool-disclosure"
+      ],
+      "font": "16px",
+      "documentOverflow": false,
+      "tables": [],
+      "figures": [],
+      "code": [
+        {
+          "language": "language-python",
+          "tokens": 26
+        }
+      ],
+      "details": 1
+    },
+    {
+      "number": 9,
+      "chapter": "sdk-context",
+      "width": 1440,
+      "denseSection": "sdk-context-defaults",
+      "sectionIds": [
+        "sdk-context-events",
+        "sdk-context-defaults",
+        "sdk-context-overflow",
+        "sdk-context-manual",
+        "sdk-context-compatibility"
+      ],
+      "font": "16px",
+      "documentOverflow": false,
+      "tables": [
+        {
+          "role": "table",
+          "display": "table",
+          "rows": 2,
+          "unlabelled": 0,
+          "overflow": false,
+          "firstCardWidth": 788
+        }
+      ],
+      "figures": [],
+      "code": [],
+      "details": 2
+    },
+    {
+      "number": 10,
+      "chapter": "backend-contracts",
+      "width": 1440,
+      "denseSection": "backend-contracts-data",
+      "sectionIds": [
+        "backend-contracts-capabilities",
+        "backend-contracts-data",
+        "backend-contracts-read",
+        "backend-contracts-edit",
+        "backend-contracts-async"
+      ],
+      "font": "16px",
+      "documentOverflow": false,
+      "tables": [
+        {
+          "role": "table",
+          "display": "table",
+          "rows": 4,
+          "unlabelled": 0,
+          "overflow": false,
+          "firstCardWidth": 788
+        }
+      ],
+      "figures": [],
+      "code": [
+        {
+          "language": "language-python",
+          "tokens": 29
+        }
+      ],
+      "details": 1
+    },
+    {
+      "number": 11,
+      "chapter": "storage-lifetimes",
+      "width": 1440,
+      "denseSection": "storage-lifetimes-costs",
+      "sectionIds": [
+        "storage-lifetimes-state",
+        "storage-lifetimes-reducer",
+        "storage-lifetimes-store",
+        "storage-lifetimes-costs"
+      ],
+      "font": "16px",
+      "documentOverflow": false,
+      "tables": [
+        {
+          "role": "table",
+          "display": "table",
+          "rows": 2,
+          "unlabelled": 0,
+          "overflow": false,
+          "firstCardWidth": 788
+        },
+        {
+          "role": "table",
+          "display": "table",
+          "rows": 5,
+          "unlabelled": 0,
+          "overflow": false,
+          "firstCardWidth": 788
+        }
+      ],
+      "figures": [],
+      "code": [],
+      "details": 0
+    },
+    {
+      "number": 12,
+      "chapter": "filesystem-host",
+      "width": 1440,
+      "denseSection": "filesystem-host-mutations",
+      "sectionIds": [
+        "filesystem-host-resolution",
+        "filesystem-host-mutations",
+        "filesystem-host-search",
+        "filesystem-host-shell"
+      ],
+      "font": "16px",
+      "documentOverflow": false,
+      "tables": [
+        {
+          "role": "table",
+          "display": "table",
+          "rows": 3,
+          "unlabelled": 0,
+          "overflow": false,
+          "firstCardWidth": 788
+        }
+      ],
+      "figures": [],
+      "code": [],
+      "details": 1
+    },
+    {
+      "number": 13,
+      "chapter": "composite-routing",
+      "width": 1440,
+      "denseSection": "composite-routing-dispatch",
+      "sectionIds": [
+        "composite-routing-dispatch",
+        "composite-routing-bulk",
+        "composite-routing-execution"
+      ],
+      "font": "16px",
+      "documentOverflow": false,
+      "tables": [
+        {
+          "role": "table",
+          "display": "table",
+          "rows": 4,
+          "unlabelled": 0,
+          "overflow": false,
+          "firstCardWidth": 788
+        },
+        {
+          "role": "table",
+          "display": "table",
+          "rows": 3,
+          "unlabelled": 0,
+          "overflow": false,
+          "firstCardWidth": 788
+        }
+      ],
+      "figures": [
+        {
+          "src": "https://higher-preferred-postings-generation.trycloudflare.com/diagrams/routing.svg",
+          "width": 738,
+          "overflow": false
+        }
+      ],
+      "code": [],
+      "details": 0
+    },
+    {
+      "number": 14,
+      "chapter": "remote-backends",
+      "width": 1440,
+      "denseSection": "remote-backends-partners",
+      "sectionIds": [
+        "remote-backends-base",
+        "remote-backends-execution",
+        "remote-backends-langsmith",
+        "remote-backends-partners",
+        "remote-backends-hub"
+      ],
+      "font": "16px",
+      "documentOverflow": false,
+      "tables": [
+        {
+          "role": "table",
+          "display": "table",
+          "rows": 3,
+          "unlabelled": 0,
+          "overflow": false,
+          "firstCardWidth": 788
+        },
+        {
+          "role": "table",
+          "display": "table",
+          "rows": 4,
+          "unlabelled": 0,
+          "overflow": false,
+          "firstCardWidth": 788
+        }
+      ],
+      "figures": [],
+      "code": [
+        {
+          "language": "language-python",
+          "tokens": 10
+        }
+      ],
+      "details": 1
+    },
+    {
+      "number": 15,
+      "chapter": "permissions-trust",
+      "width": 1440,
+      "denseSection": "permissions-trust-rules",
+      "sectionIds": [
+        "permissions-trust-rules",
+        "permissions-trust-bulk",
+        "permissions-trust-approval",
+        "permissions-trust-precedence",
+        "permissions-trust-threats"
+      ],
+      "font": "16px",
+      "documentOverflow": false,
+      "tables": [
+        {
+          "role": "table",
+          "display": "table",
+          "rows": 6,
+          "unlabelled": 0,
+          "overflow": false,
+          "firstCardWidth": 788
+        },
+        {
+          "role": "table",
+          "display": "table",
+          "rows": 5,
+          "unlabelled": 0,
+          "overflow": false,
+          "firstCardWidth": 746
+        },
+        {
+          "role": "table",
+          "display": "table",
+          "rows": 4,
+          "unlabelled": 0,
+          "overflow": false,
+          "firstCardWidth": 788
+        }
+      ],
+      "figures": [],
+      "code": [
+        {
+          "language": "language-python",
+          "tokens": 55
+        }
+      ],
+      "details": 5
+    },
+    {
+      "number": 16,
+      "chapter": "code-runtime",
+      "width": 1440,
+      "denseSection": "code-runtime-launch",
+      "sectionIds": [
+        "code-runtime-launch",
+        "code-runtime-assembly",
+        "code-runtime-backends",
+        "code-runtime-streaming",
+        "code-runtime-sessions"
+      ],
+      "font": "16px",
+      "documentOverflow": false,
+      "tables": [],
+      "figures": [
+        {
+          "src": "https://higher-preferred-postings-generation.trycloudflare.com/diagrams/code-processes.svg",
+          "width": 738,
+          "overflow": false
+        }
+      ],
+      "code": [],
+      "details": 1
+    },
+    {
+      "number": 17,
+      "chapter": "code-control",
+      "width": 1440,
+      "denseSection": "code-control-extensibility",
+      "sectionIds": [
+        "code-control-configuration",
+        "code-control-models",
+        "code-control-approval",
+        "code-control-extensibility",
+        "code-control-headless"
+      ],
+      "font": "16px",
+      "documentOverflow": false,
+      "tables": [
+        {
+          "role": "table",
+          "display": "table",
+          "rows": 4,
+          "unlabelled": 0,
+          "overflow": false,
+          "firstCardWidth": 788
+        }
+      ],
+      "figures": [],
+      "code": [],
+      "details": 1
+    },
+    {
+      "number": 18,
+      "chapter": "talon-runtime",
+      "width": 1440,
+      "denseSection": "talon-runtime-cron",
+      "sectionIds": [
+        "talon-runtime-boot",
+        "talon-runtime-message",
+        "talon-runtime-authority",
+        "talon-runtime-persistence",
+        "talon-runtime-background",
+        "talon-runtime-cron"
+      ],
+      "font": "16px",
+      "documentOverflow": false,
+      "tables": [],
+      "figures": [],
+      "code": [],
+      "details": 2
+    },
+    {
+      "number": 19,
+      "chapter": "acp-runtime",
+      "width": 1440,
+      "denseSection": "acp-runtime-permissions",
+      "sectionIds": [
+        "acp-runtime-server",
+        "acp-runtime-sessions",
+        "acp-runtime-prompt",
+        "acp-runtime-permissions"
+      ],
+      "font": "16px",
+      "documentOverflow": false,
+      "tables": [],
+      "figures": [],
+      "code": [],
+      "details": 0
+    },
+    {
+      "number": 20,
+      "chapter": "partners-examples",
+      "width": 1440,
+      "denseSection": "partners-examples-provider-semantics",
+      "sectionIds": [
+        "partners-examples-inventory",
+        "partners-examples-provider-semantics",
+        "partners-examples-quickjs",
+        "partners-examples-direct-agents",
+        "partners-examples-workflows",
+        "partners-examples-profiles"
+      ],
+      "font": "16px",
+      "documentOverflow": false,
+      "tables": [
+        {
+          "role": "table",
+          "display": "table",
+          "rows": 5,
+          "unlabelled": 0,
+          "overflow": false,
+          "firstCardWidth": 788
+        },
+        {
+          "role": "table",
+          "display": "table",
+          "rows": 4,
+          "unlabelled": 0,
+          "overflow": false,
+          "firstCardWidth": 788
+        }
+      ],
+      "figures": [],
+      "code": [],
+      "details": 0
+    },
+    {
+      "number": 21,
+      "chapter": "sdk-profiles",
+      "width": 1440,
+      "denseSection": "sdk-profiles-shipped-effects",
+      "sectionIds": [
+        "sdk-profiles-shipped-effects",
+        "sdk-profiles-two-registries",
+        "sdk-profiles-merging",
+        "sdk-profiles-bootstrap",
+        "sdk-profiles-exclusion",
+        "sdk-profiles-rubric",
+        "sdk-profiles-debugging"
+      ],
+      "font": "16px",
+      "documentOverflow": false,
+      "tables": [
+        {
+          "role": "table",
+          "display": "table",
+          "rows": 3,
+          "unlabelled": 0,
+          "overflow": false,
+          "firstCardWidth": 788
+        }
+      ],
+      "figures": [],
+      "code": [
+        {
+          "language": "language-python",
+          "tokens": 39
+        }
+      ],
+      "details": 1
+    },
+    {
+      "number": 22,
+      "chapter": "eval-harness",
+      "width": 1440,
+      "denseSection": "eval-harness-trajectory",
+      "sectionIds": [
+        "eval-harness-fixtures",
+        "eval-harness-trajectory",
+        "eval-harness-runner",
+        "eval-harness-benchmarks"
+      ],
+      "font": "16px",
+      "documentOverflow": false,
+      "tables": [
+        {
+          "role": "table",
+          "display": "table",
+          "rows": 4,
+          "unlabelled": 0,
+          "overflow": false,
+          "firstCardWidth": 788
+        },
+        {
+          "role": "table",
+          "display": "table",
+          "rows": 2,
+          "unlabelled": 0,
+          "overflow": false,
+          "firstCardWidth": 788
+        }
+      ],
+      "figures": [],
+      "code": [
+        {
+          "language": "language-bash",
+          "tokens": 15
+        }
+      ],
+      "details": 0
+    },
+    {
+      "number": 23,
+      "chapter": "repo-engineering",
+      "width": 1440,
+      "denseSection": "repo-engineering-commands",
+      "sectionIds": [
+        "repo-engineering-commands",
+        "repo-engineering-test-map",
+        "repo-engineering-evidence"
+      ],
+      "font": "16px",
+      "documentOverflow": false,
+      "tables": [
+        {
+          "role": "table",
+          "display": "table",
+          "rows": 5,
+          "unlabelled": 0,
+          "overflow": false,
+          "firstCardWidth": 788
+        }
+      ],
+      "figures": [],
+      "code": [
+        {
+          "language": "language-bash",
+          "tokens": 9
+        }
+      ],
+      "details": 0
+    },
+    {
+      "number": 1,
+      "chapter": "sdk-layers",
+      "width": 390,
+      "denseSection": "sdk-layers-construction",
+      "sectionIds": [
+        "sdk-layers-ownership",
+        "sdk-layers-construction",
+        "sdk-layers-planning",
+        "sdk-layers-public-api"
+      ],
+      "font": "16px",
+      "documentOverflow": false,
+      "tables": [],
+      "figures": [],
+      "code": [
+        {
+          "language": "language-python",
+          "tokens": 18
+        }
+      ],
+      "details": 1
+    },
+    {
+      "number": 2,
+      "chapter": "app-packages",
+      "width": 390,
+      "denseSection": "app-packages-boundaries",
+      "sectionIds": [
+        "app-packages-boundaries",
+        "app-packages-dependency-direction",
+        "app-packages-scope"
+      ],
+      "font": "16px",
+      "documentOverflow": false,
+      "tables": [
+        {
+          "role": "table",
+          "display": "block",
+          "rows": 5,
+          "unlabelled": 0,
+          "overflow": false,
+          "firstCardWidth": 344
+        }
+      ],
+      "figures": [],
+      "code": [],
+      "details": 0
+    },
+    {
+      "number": 3,
+      "chapter": "sdk-construction",
+      "width": 390,
+      "denseSection": "sdk-construction-parameters",
+      "sectionIds": [
+        "sdk-construction-parameters",
+        "sdk-construction-models",
+        "sdk-construction-prompts",
+        "sdk-construction-stack",
+        "sdk-construction-child-defaults"
+      ],
+      "font": "16px",
+      "documentOverflow": false,
+      "tables": [
+        {
+          "role": "table",
+          "display": "block",
+          "rows": 8,
+          "unlabelled": 0,
+          "overflow": false,
+          "firstCardWidth": 344
+        }
+      ],
+      "figures": [
+        {
+          "src": "https://higher-preferred-postings-generation.trycloudflare.com/diagrams/construction-mobile.svg",
+          "width": 322,
+          "overflow": false
+        }
+      ],
+      "code": [
+        {
+          "language": "language-python",
+          "tokens": 50
+        }
+      ],
+      "details": 1
+    },
+    {
+      "number": 4,
+      "chapter": "sdk-state",
+      "width": 390,
+      "denseSection": "sdk-state-streaming",
+      "sectionIds": [
+        "sdk-state-channel",
+        "sdk-state-projections",
+        "sdk-state-schemas",
+        "sdk-state-hitl",
+        "sdk-state-streaming"
+      ],
+      "font": "16px",
+      "documentOverflow": false,
+      "tables": [
+        {
+          "role": "table",
+          "display": "block",
+          "rows": 3,
+          "unlabelled": 0,
+          "overflow": false,
+          "firstCardWidth": 344
+        },
+        {
+          "role": "table",
+          "display": "block",
+          "rows": 3,
+          "unlabelled": 0,
+          "overflow": false,
+          "firstCardWidth": 344
+        },
+        {
+          "role": "table",
+          "display": "block",
+          "rows": 2,
+          "unlabelled": 0,
+          "overflow": false,
+          "firstCardWidth": 302
+        }
+      ],
+      "figures": [
+        {
+          "src": "https://higher-preferred-postings-generation.trycloudflare.com/diagrams/state-flow-mobile.svg",
+          "width": 322,
+          "overflow": false
+        }
+      ],
+      "code": [],
+      "details": 2
+    },
+    {
+      "number": 5,
+      "chapter": "sdk-filesystem",
+      "width": 390,
+      "denseSection": "sdk-filesystem-text-offload",
+      "sectionIds": [
+        "sdk-filesystem-tools",
+        "sdk-filesystem-read",
+        "sdk-filesystem-mutations",
+        "sdk-filesystem-text-offload",
+        "sdk-filesystem-media"
+      ],
+      "font": "16px",
+      "documentOverflow": false,
+      "tables": [],
+      "figures": [],
+      "code": [],
+      "details": 1
+    },
+    {
+      "number": 6,
+      "chapter": "sdk-delegation",
+      "width": 390,
+      "denseSection": "sdk-delegation-isolation",
+      "sectionIds": [
+        "sdk-delegation-specs",
+        "sdk-delegation-isolation",
+        "sdk-delegation-forks",
+        "sdk-delegation-results"
+      ],
+      "font": "16px",
+      "documentOverflow": false,
+      "tables": [
+        {
+          "role": "table",
+          "display": "block",
+          "rows": 3,
+          "unlabelled": 0,
+          "overflow": false,
+          "firstCardWidth": 344
+        }
+      ],
+      "figures": [
+        {
+          "src": "https://higher-preferred-postings-generation.trycloudflare.com/diagrams/delegation-mobile.svg",
+          "width": 322,
+          "overflow": false
+        }
+      ],
+      "code": [],
+      "details": 2
+    },
+    {
+      "number": 7,
+      "chapter": "sdk-background",
+      "width": 390,
+      "denseSection": "sdk-background-status",
+      "sectionIds": [
+        "sdk-background-launch",
+        "sdk-background-status",
+        "sdk-background-update",
+        "sdk-background-notifications"
+      ],
+      "font": "16px",
+      "documentOverflow": false,
+      "tables": [
+        {
+          "role": "table",
+          "display": "block",
+          "rows": 4,
+          "unlabelled": 0,
+          "overflow": false,
+          "firstCardWidth": 344
+        }
+      ],
+      "figures": [],
+      "code": [],
+      "details": 1
+    },
+    {
+      "number": 8,
+      "chapter": "sdk-knowledge",
+      "width": 390,
+      "denseSection": "sdk-knowledge-tool-disclosure",
+      "sectionIds": [
+        "sdk-knowledge-memory",
+        "sdk-knowledge-discovery",
+        "sdk-knowledge-pins",
+        "sdk-knowledge-tool-disclosure"
+      ],
+      "font": "16px",
+      "documentOverflow": false,
+      "tables": [],
+      "figures": [],
+      "code": [
+        {
+          "language": "language-python",
+          "tokens": 26
+        }
+      ],
+      "details": 1
+    },
+    {
+      "number": 9,
+      "chapter": "sdk-context",
+      "width": 390,
+      "denseSection": "sdk-context-defaults",
+      "sectionIds": [
+        "sdk-context-events",
+        "sdk-context-defaults",
+        "sdk-context-overflow",
+        "sdk-context-manual",
+        "sdk-context-compatibility"
+      ],
+      "font": "16px",
+      "documentOverflow": false,
+      "tables": [
+        {
+          "role": "table",
+          "display": "block",
+          "rows": 2,
+          "unlabelled": 0,
+          "overflow": false,
+          "firstCardWidth": 344
+        }
+      ],
+      "figures": [],
+      "code": [],
+      "details": 2
+    },
+    {
+      "number": 10,
+      "chapter": "backend-contracts",
+      "width": 390,
+      "denseSection": "backend-contracts-data",
+      "sectionIds": [
+        "backend-contracts-capabilities",
+        "backend-contracts-data",
+        "backend-contracts-read",
+        "backend-contracts-edit",
+        "backend-contracts-async"
+      ],
+      "font": "16px",
+      "documentOverflow": false,
+      "tables": [
+        {
+          "role": "table",
+          "display": "block",
+          "rows": 4,
+          "unlabelled": 0,
+          "overflow": false,
+          "firstCardWidth": 344
+        }
+      ],
+      "figures": [],
+      "code": [
+        {
+          "language": "language-python",
+          "tokens": 29
+        }
+      ],
+      "details": 1
+    },
+    {
+      "number": 11,
+      "chapter": "storage-lifetimes",
+      "width": 390,
+      "denseSection": "storage-lifetimes-costs",
+      "sectionIds": [
+        "storage-lifetimes-state",
+        "storage-lifetimes-reducer",
+        "storage-lifetimes-store",
+        "storage-lifetimes-costs"
+      ],
+      "font": "16px",
+      "documentOverflow": false,
+      "tables": [
+        {
+          "role": "table",
+          "display": "block",
+          "rows": 2,
+          "unlabelled": 0,
+          "overflow": false,
+          "firstCardWidth": 344
+        },
+        {
+          "role": "table",
+          "display": "block",
+          "rows": 5,
+          "unlabelled": 0,
+          "overflow": false,
+          "firstCardWidth": 344
+        }
+      ],
+      "figures": [],
+      "code": [],
+      "details": 0
+    },
+    {
+      "number": 12,
+      "chapter": "filesystem-host",
+      "width": 390,
+      "denseSection": "filesystem-host-mutations",
+      "sectionIds": [
+        "filesystem-host-resolution",
+        "filesystem-host-mutations",
+        "filesystem-host-search",
+        "filesystem-host-shell"
+      ],
+      "font": "16px",
+      "documentOverflow": false,
+      "tables": [
+        {
+          "role": "table",
+          "display": "block",
+          "rows": 3,
+          "unlabelled": 0,
+          "overflow": false,
+          "firstCardWidth": 344
+        }
+      ],
+      "figures": [],
+      "code": [],
+      "details": 1
+    },
+    {
+      "number": 13,
+      "chapter": "composite-routing",
+      "width": 390,
+      "denseSection": "composite-routing-dispatch",
+      "sectionIds": [
+        "composite-routing-dispatch",
+        "composite-routing-bulk",
+        "composite-routing-execution"
+      ],
+      "font": "16px",
+      "documentOverflow": false,
+      "tables": [
+        {
+          "role": "table",
+          "display": "block",
+          "rows": 4,
+          "unlabelled": 0,
+          "overflow": false,
+          "firstCardWidth": 344
+        },
+        {
+          "role": "table",
+          "display": "block",
+          "rows": 3,
+          "unlabelled": 0,
+          "overflow": false,
+          "firstCardWidth": 344
+        }
+      ],
+      "figures": [
+        {
+          "src": "https://higher-preferred-postings-generation.trycloudflare.com/diagrams/routing-mobile.svg",
+          "width": 322,
+          "overflow": false
+        }
+      ],
+      "code": [],
+      "details": 0
+    },
+    {
+      "number": 14,
+      "chapter": "remote-backends",
+      "width": 390,
+      "denseSection": "remote-backends-partners",
+      "sectionIds": [
+        "remote-backends-base",
+        "remote-backends-execution",
+        "remote-backends-langsmith",
+        "remote-backends-partners",
+        "remote-backends-hub"
+      ],
+      "font": "16px",
+      "documentOverflow": false,
+      "tables": [
+        {
+          "role": "table",
+          "display": "block",
+          "rows": 3,
+          "unlabelled": 0,
+          "overflow": false,
+          "firstCardWidth": 344
+        },
+        {
+          "role": "table",
+          "display": "block",
+          "rows": 4,
+          "unlabelled": 0,
+          "overflow": false,
+          "firstCardWidth": 344
+        }
+      ],
+      "figures": [],
+      "code": [
+        {
+          "language": "language-python",
+          "tokens": 10
+        }
+      ],
+      "details": 1
+    },
+    {
+      "number": 15,
+      "chapter": "permissions-trust",
+      "width": 390,
+      "denseSection": "permissions-trust-rules",
+      "sectionIds": [
+        "permissions-trust-rules",
+        "permissions-trust-bulk",
+        "permissions-trust-approval",
+        "permissions-trust-precedence",
+        "permissions-trust-threats"
+      ],
+      "font": "16px",
+      "documentOverflow": false,
+      "tables": [
+        {
+          "role": "table",
+          "display": "block",
+          "rows": 6,
+          "unlabelled": 0,
+          "overflow": false,
+          "firstCardWidth": 344
+        },
+        {
+          "role": "table",
+          "display": "block",
+          "rows": 5,
+          "unlabelled": 0,
+          "overflow": false,
+          "firstCardWidth": 302
+        },
+        {
+          "role": "table",
+          "display": "block",
+          "rows": 4,
+          "unlabelled": 0,
+          "overflow": false,
+          "firstCardWidth": 344
+        }
+      ],
+      "figures": [],
+      "code": [
+        {
+          "language": "language-python",
+          "tokens": 55
+        }
+      ],
+      "details": 5
+    },
+    {
+      "number": 16,
+      "chapter": "code-runtime",
+      "width": 390,
+      "denseSection": "code-runtime-launch",
+      "sectionIds": [
+        "code-runtime-launch",
+        "code-runtime-assembly",
+        "code-runtime-backends",
+        "code-runtime-streaming",
+        "code-runtime-sessions"
+      ],
+      "font": "16px",
+      "documentOverflow": false,
+      "tables": [],
+      "figures": [
+        {
+          "src": "https://higher-preferred-postings-generation.trycloudflare.com/diagrams/code-processes-mobile.svg",
+          "width": 322,
+          "overflow": false
+        }
+      ],
+      "code": [],
+      "details": 1
+    },
+    {
+      "number": 17,
+      "chapter": "code-control",
+      "width": 390,
+      "denseSection": "code-control-extensibility",
+      "sectionIds": [
+        "code-control-configuration",
+        "code-control-models",
+        "code-control-approval",
+        "code-control-extensibility",
+        "code-control-headless"
+      ],
+      "font": "16px",
+      "documentOverflow": false,
+      "tables": [
+        {
+          "role": "table",
+          "display": "block",
+          "rows": 4,
+          "unlabelled": 0,
+          "overflow": false,
+          "firstCardWidth": 344
+        }
+      ],
+      "figures": [],
+      "code": [],
+      "details": 1
+    },
+    {
+      "number": 18,
+      "chapter": "talon-runtime",
+      "width": 390,
+      "denseSection": "talon-runtime-cron",
+      "sectionIds": [
+        "talon-runtime-boot",
+        "talon-runtime-message",
+        "talon-runtime-authority",
+        "talon-runtime-persistence",
+        "talon-runtime-background",
+        "talon-runtime-cron"
+      ],
+      "font": "16px",
+      "documentOverflow": false,
+      "tables": [],
+      "figures": [],
+      "code": [],
+      "details": 2
+    },
+    {
+      "number": 19,
+      "chapter": "acp-runtime",
+      "width": 390,
+      "denseSection": "acp-runtime-permissions",
+      "sectionIds": [
+        "acp-runtime-server",
+        "acp-runtime-sessions",
+        "acp-runtime-prompt",
+        "acp-runtime-permissions"
+      ],
+      "font": "16px",
+      "documentOverflow": false,
+      "tables": [],
+      "figures": [],
+      "code": [],
+      "details": 0
+    },
+    {
+      "number": 20,
+      "chapter": "partners-examples",
+      "width": 390,
+      "denseSection": "partners-examples-provider-semantics",
+      "sectionIds": [
+        "partners-examples-inventory",
+        "partners-examples-provider-semantics",
+        "partners-examples-quickjs",
+        "partners-examples-direct-agents",
+        "partners-examples-workflows",
+        "partners-examples-profiles"
+      ],
+      "font": "16px",
+      "documentOverflow": false,
+      "tables": [
+        {
+          "role": "table",
+          "display": "block",
+          "rows": 5,
+          "unlabelled": 0,
+          "overflow": false,
+          "firstCardWidth": 344
+        },
+        {
+          "role": "table",
+          "display": "block",
+          "rows": 4,
+          "unlabelled": 0,
+          "overflow": false,
+          "firstCardWidth": 344
+        }
+      ],
+      "figures": [],
+      "code": [],
+      "details": 0
+    },
+    {
+      "number": 21,
+      "chapter": "sdk-profiles",
+      "width": 390,
+      "denseSection": "sdk-profiles-shipped-effects",
+      "sectionIds": [
+        "sdk-profiles-shipped-effects",
+        "sdk-profiles-two-registries",
+        "sdk-profiles-merging",
+        "sdk-profiles-bootstrap",
+        "sdk-profiles-exclusion",
+        "sdk-profiles-rubric",
+        "sdk-profiles-debugging"
+      ],
+      "font": "16px",
+      "documentOverflow": false,
+      "tables": [
+        {
+          "role": "table",
+          "display": "block",
+          "rows": 3,
+          "unlabelled": 0,
+          "overflow": false,
+          "firstCardWidth": 344
+        }
+      ],
+      "figures": [],
+      "code": [
+        {
+          "language": "language-python",
+          "tokens": 39
+        }
+      ],
+      "details": 1
+    },
+    {
+      "number": 22,
+      "chapter": "eval-harness",
+      "width": 390,
+      "denseSection": "eval-harness-trajectory",
+      "sectionIds": [
+        "eval-harness-fixtures",
+        "eval-harness-trajectory",
+        "eval-harness-runner",
+        "eval-harness-benchmarks"
+      ],
+      "font": "16px",
+      "documentOverflow": false,
+      "tables": [
+        {
+          "role": "table",
+          "display": "block",
+          "rows": 4,
+          "unlabelled": 0,
+          "overflow": false,
+          "firstCardWidth": 344
+        },
+        {
+          "role": "table",
+          "display": "block",
+          "rows": 2,
+          "unlabelled": 0,
+          "overflow": false,
+          "firstCardWidth": 344
+        }
+      ],
+      "figures": [],
+      "code": [
+        {
+          "language": "language-bash",
+          "tokens": 15
+        }
+      ],
+      "details": 0
+    },
+    {
+      "number": 23,
+      "chapter": "repo-engineering",
+      "width": 390,
+      "denseSection": "repo-engineering-commands",
+      "sectionIds": [
+        "repo-engineering-commands",
+        "repo-engineering-test-map",
+        "repo-engineering-evidence"
+      ],
+      "font": "16px",
+      "documentOverflow": false,
+      "tables": [
+        {
+          "role": "table",
+          "display": "block",
+          "rows": 5,
+          "unlabelled": 0,
+          "overflow": false,
+          "firstCardWidth": 344
+        }
+      ],
+      "figures": [],
+      "code": [
+        {
+          "language": "language-bash",
+          "tokens": 9
+        }
+      ],
+      "details": 0
+    }
+  ],
+  "pageErrors": [],
+  "diagramViews": [
+    {
+      "name": "layers",
+      "viewport": 360,
+      "src": "https://higher-preferred-postings-generation.trycloudflare.com/diagrams/layers-mobile.svg",
+      "width": 292,
+      "height": 377.765625,
+      "panelWidth": 312,
+      "panelOverflow": false
+    },
+    {
+      "name": "execution",
+      "viewport": 360,
+      "src": "https://higher-preferred-postings-generation.trycloudflare.com/diagrams/execution-mobile.svg",
+      "width": 298,
+      "height": 508.453125,
+      "panelWidth": 318,
+      "panelOverflow": false
+    },
+    {
+      "name": "construction",
+      "viewport": 360,
+      "src": "https://higher-preferred-postings-generation.trycloudflare.com/diagrams/construction-mobile.svg",
+      "width": 292,
+      "height": 377.765625,
+      "panelWidth": 312,
+      "panelOverflow": false
+    },
+    {
+      "name": "state-flow",
+      "viewport": 360,
+      "src": "https://higher-preferred-postings-generation.trycloudflare.com/diagrams/state-flow-mobile.svg",
+      "width": 292,
+      "height": 410.625,
+      "panelWidth": 312,
+      "panelOverflow": false
+    },
+    {
+      "name": "delegation",
+      "viewport": 360,
+      "src": "https://higher-preferred-postings-generation.trycloudflare.com/diagrams/delegation-mobile.svg",
+      "width": 292,
+      "height": 377.765625,
+      "panelWidth": 312,
+      "panelOverflow": false
+    },
+    {
+      "name": "routing",
+      "viewport": 360,
+      "src": "https://higher-preferred-postings-generation.trycloudflare.com/diagrams/routing-mobile.svg",
+      "width": 292,
+      "height": 312.0625,
+      "panelWidth": 312,
+      "panelOverflow": false
+    },
+    {
+      "name": "code-processes",
+      "viewport": 360,
+      "src": "https://higher-preferred-postings-generation.trycloudflare.com/diagrams/code-processes-mobile.svg",
+      "width": 292,
+      "height": 365,
+      "panelWidth": 312,
+      "panelOverflow": false
+    },
+    {
+      "name": "layers",
+      "viewport": 768,
+      "src": "https://higher-preferred-postings-generation.trycloudflare.com/diagrams/layers-mobile.svg",
+      "width": 360,
+      "height": 465.75,
+      "panelWidth": 461,
+      "panelOverflow": false
+    },
+    {
+      "name": "execution",
+      "viewport": 768,
+      "src": "https://higher-preferred-postings-generation.trycloudflare.com/diagrams/execution-mobile.svg",
+      "width": 360,
+      "height": 614.25,
+      "panelWidth": 471,
+      "panelOverflow": false
+    },
+    {
+      "name": "construction",
+      "viewport": 768,
+      "src": "https://higher-preferred-postings-generation.trycloudflare.com/diagrams/construction-mobile.svg",
+      "width": 360,
+      "height": 465.75,
+      "panelWidth": 451,
+      "panelOverflow": false
+    },
+    {
+      "name": "state-flow",
+      "viewport": 768,
+      "src": "https://higher-preferred-postings-generation.trycloudflare.com/diagrams/state-flow-mobile.svg",
+      "width": 360,
+      "height": 506.25,
+      "panelWidth": 451,
+      "panelOverflow": false
+    },
+    {
+      "name": "delegation",
+      "viewport": 768,
+      "src": "https://higher-preferred-postings-generation.trycloudflare.com/diagrams/delegation-mobile.svg",
+      "width": 360,
+      "height": 465.75,
+      "panelWidth": 451,
+      "panelOverflow": false
+    },
+    {
+      "name": "routing",
+      "viewport": 768,
+      "src": "https://higher-preferred-postings-generation.trycloudflare.com/diagrams/routing-mobile.svg",
+      "width": 360,
+      "height": 384.75,
+      "panelWidth": 451,
+      "panelOverflow": false
+    },
+    {
+      "name": "code-processes",
+      "viewport": 768,
+      "src": "https://higher-preferred-postings-generation.trycloudflare.com/diagrams/code-processes-mobile.svg",
+      "width": 360,
+      "height": 450,
+      "panelWidth": 451,
+      "panelOverflow": false
+    }
+  ],
+  "interactions": {
+    "referenceDisclosures": "opened and closed",
+    "search": "#/chapter/sdk-knowledge?section=sdk-knowledge-memory",
+    "theme": "dark and light",
+    "copy": "exact Python example copied",
+    "mobileNavigation": "selected chapter and collapsed menu",
+    "mobileTableSemantics": "table, rowgroup, columnheader and cell roles retained; visual field labels aria-hidden",
+    "sourceCitation": {
+      "file": "libs/deepagents/deepagents/graph.py",
+      "highlighted": 4
+    },
+    "walkthroughSteps": 18
+  },
+  "publishedAssets": [
+    {
+      "path": "app.js",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "styles.css",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "chapter-diagrams.js",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "content/sdk.json",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "content/backends.json",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "content/applications.json",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "diagrams/layers-mobile.svg",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "diagrams/execution-mobile.svg",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "diagrams/construction-mobile.svg",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "diagrams/state-flow-mobile.svg",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "diagrams/delegation-mobile.svg",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "diagrams/routing-mobile.svg",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "diagrams/code-processes-mobile.svg",
+      "status": 200,
+      "match": true
+    }
+  ],
+  "upstreamTestsRun": false,
+  "diagramReview": {
+    "evidence": "Rendered PNG, cropped 288px fit previews and actual public desktop/mobile screenshots",
+    "composition": {
+      "G1": "pass",
+      "G2": "pass",
+      "G5": "pass",
+      "G6": "pass",
+      "G8": "pass",
+      "G9": "pass"
+    },
+    "mechanical": {
+      "G3": "pass",
+      "G4": "pass",
+      "G7": "pass"
+    },
+    "acceptedHeuristics": [
+      "execution-mobile.svg: long dogleg is the genuine, muted tool-result return on a dedicated clear rail",
+      "state-flow-mobile.svg: long dogleg is the genuine, muted next-iteration return on a dedicated clear rail"
+    ],
+    "unresolvedFindings": []
+  },
+  "syntaxChecks": {
+    "syntaxOnly": {
+      "python": 7,
+      "bash": 2
+    },
+    "modelCalls": 0
+  }
+}

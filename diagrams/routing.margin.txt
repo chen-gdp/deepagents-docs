@@ -1,0 +1,5 @@
+FILE: /home/christian/Projects/GAT/ai-agent/docs/deepagents-explorer/diagrams/routing.png
+  size: 1520x1230
+  content bbox: x=58..1461, y=48..1171
+  margins px: top=48, bottom=58, left=58, right=58
+  margins %: top=3.9, bottom=4.7, left=3.8, right=3.8

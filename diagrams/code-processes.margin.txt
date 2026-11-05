@@ -1,0 +1,5 @@
+FILE: /home/christian/Projects/GAT/ai-agent/docs/deepagents-explorer/diagrams/code-processes.png
+  size: 1520x770
+  content bbox: x=58..1461, y=48..711
+  margins px: top=48, bottom=58, left=58, right=58
+  margins %: top=6.2, bottom=7.5, left=3.8, right=3.8

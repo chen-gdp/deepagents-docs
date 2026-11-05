@@ -1,0 +1,1719 @@
+[
+  {
+    "id": "sdk-layers",
+    "group": "Foundations",
+    "title": "What the SDK actually builds",
+    "kicker": "A harness, not a new graph runtime",
+    "summary": "Separate model decisions, middleware policy, backend effects, and LangGraph execution before tracing a single tool call.",
+    "readingMinutes": 13,
+    "sections": [
+      {
+        "id": "sdk-layers-ownership",
+        "title": "Four layers, four different responsibilities",
+        "body": "<p>A deep agent is a compiled LangGraph agent assembled with middleware. The SDK does not replace LangChain's agent loop or implement a graph scheduler: its entry point imports <code>create_agent</code> from <code>langchain.agents</code>, prepares inputs, and configures the returned graph.</p><h3>Follow a filesystem call across four boundaries</h3><ol class=\"explain-steps\"><li><strong>The model chooses.</strong> It produces assistant text or a tool call with an argument object; it does not reach directly into Python or storage.</li><li><strong>The agent loop dispatches.</strong> LangChain runs the model/tool loop. A registered tool validates and interprets the arguments, while Deep Agents middleware supplies tools and transforms requests, results, or state.</li><li><strong>The backend performs the effect.</strong> The selected backend reads or writes storage and, where supported, executes commands. Middleware can reject or reshape a call, or offload its result; that policy is distinct from the backend effect.</li><li><strong>The graph receives the result.</strong> A <code>ToolMessage</code>, sometimes accompanied by a <code>Command</code> state update, carries the result back. Malformed arguments, unavailable <code>execute</code> capability, and backend permission rules belong to different debugging boundaries—not all are provider or graph failures.</li></ol><aside class=\"callout\"><p><strong>Boundary caveat:</strong> a backend permission rule is not automatically an operating-system sandbox. All behavior here is pinned to this revision; dependency-owned machinery is identified as a handoff, not reconstructed as SDK internals.</p></aside>",
+        "sources": [
+          {
+            "path": "libs/deepagents/deepagents/graph.py",
+            "start": 8,
+            "end": 69,
+            "label": "Framework imports and Deep Agents components"
+          },
+          {
+            "path": "libs/deepagents/deepagents/graph.py",
+            "start": 1008,
+            "end": 1030,
+            "label": "Return compiled LangChain agent"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/filesystem.py",
+            "start": 2271,
+            "end": 2296,
+            "label": "Read tool crosses into backend"
+          }
+        ]
+      },
+      {
+        "id": "sdk-layers-construction",
+        "title": "Construction is not execution",
+        "body": "<p>Calling <code>create_deep_agent(...)</code> builds a graph; it does not run a user turn. Read the lifecycle in three phases.</p><ol class=\"explain-steps\"><li><strong>Construct and compile.</strong> Resolve the model and select its harness profile, create the backend if omitted, prepare child agents and middleware, then call <code>create_agent</code>. Declarative children are compiled during assembly. Invalid middleware exclusions can fail here, before invocation.</li><li><strong>Start an invocation.</strong> Middleware startup hooks load memory and skill source contents later. A missing memory file is considered at this stage, not while the constructor merely assembles the graph.</li><li><strong>Handle requests and tools.</strong> Tool handlers run only once the graph is invoked; a backend read error belongs here. Registered tools and tools offered on a particular model request can differ: unsupported filesystem capabilities are filtered, and skills disclose tools only after the effective conversation shows that the skill was read.</li></ol><aside class=\"callout\"><p><strong>Configuration is not a budget:</strong> the returned <code>CompiledStateGraph</code> receives <code>recursion_limit=9_999</code> and tracing metadata naming Deep Agents and its version. This is not 9,999 guaranteed responses, a tool budget, or a timeout. The caller still owns invocation configuration, credentials, checkpoint infrastructure, and runtime cancellation.</p></aside><p>For a trace, ask separately: “What was registered in the compiled graph?” and “What was offered to the model on this request?”</p>",
+        "sources": [
+          {
+            "path": "libs/deepagents/deepagents/graph.py",
+            "start": 628,
+            "end": 698,
+            "label": "Model, backend and prompt construction"
+          },
+          {
+            "path": "libs/deepagents/deepagents/graph.py",
+            "start": 898,
+            "end": 939,
+            "label": "Compile inline subagents and assemble main stack"
+          },
+          {
+            "path": "libs/deepagents/deepagents/graph.py",
+            "start": 1008,
+            "end": 1030,
+            "label": "Graph configuration"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/memory.py",
+            "start": 278,
+            "end": 310,
+            "label": "Deferred memory load"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/skills.py",
+            "start": 1320,
+            "end": 1340,
+            "label": "Request-time skill disclosure"
+          }
+        ]
+      },
+      {
+        "id": "sdk-layers-planning",
+        "title": "Planning is LangChain middleware, not a built-in SDK module",
+        "body": "<p>Planning makes a multi-action request easier to track. For “read <code>/notes/brief.txt</code> and produce <code>/notes/report.txt</code>,” a useful plan is to read the brief, draft the report, then check that it answers the brief. A todo list records intended work; it does not execute actions or prove they succeeded.</p><p><strong>Illustrative configuration, not executed here:</strong></p><pre><code class=\"language-python\">from deepagents import create_deep_agent\nfrom langchain.agents.middleware import TodoListMiddleware\n\nagent = create_deep_agent(\n    model=\"openai:gpt-5.5\",\n    middleware=[TodoListMiddleware()],\n)</code></pre><p>This explicitly supplies LangChain's planning middleware and its <code>write_todos</code> tool. The agent still chooses when to update the plan and invoke file tools. Without explicit configuration, planning is model-profile-dependent: the unconditional core stack does not insert <code>TodoListMiddleware</code>, but that does not make planning universally absent.</p><h3>Where planning enters the harness</h3><ul><li><strong>Core and caller configuration.</strong> Core assembly provides filesystem, optional synchronous delegation, parent notification, summarization, patching, and optional background delegation. Caller middleware or a matching harness profile can add planning.</li><li><strong>Codex profiles.</strong> The shipped <code>openai:gpt-5.1-codex</code>, <code>openai:gpt-5.2-codex</code>, and <code>openai:gpt-5.3-codex</code> profiles automatically add LangChain's <code>TodoListMiddleware</code>. See <a href=\"#/chapter/sdk-profiles?section=sdk-profiles-shipped-effects\">the concrete built-in profile effects</a>.</li></ul><details><summary>Reference: parallel todo writes and implementation ownership</summary><p>The repository imports <code>TodoListMiddleware</code> from <code>langchain.agents.middleware</code> and tests it with LangChain <code>create_agent</code>. Two <code>write_todos</code> calls in one assistant response should both return errors and write no todo state. This exercises a dependency integration contract, not Deep Agents todo-storage code.</p></details><p>For a missing planning tool, inspect assembled middleware rather than searching for a Deep Agents todo module. The next section is an import reference, separate from this execution model.</p>",
+        "sources": [
+          {
+            "path": "libs/deepagents/deepagents/graph.py",
+            "start": 906,
+            "end": 954,
+            "label": "Actual core and profile middleware assembly"
+          },
+          {
+            "path": "libs/deepagents/tests/unit_tests/test_todo_middleware.py",
+            "start": 7,
+            "end": 9,
+            "label": "Todo middleware belongs to LangChain"
+          },
+          {
+            "path": "libs/deepagents/tests/unit_tests/test_todo_middleware.py",
+            "start": 79,
+            "end": 102,
+            "label": "Parallel todo test expectation"
+          },
+          {
+            "path": "libs/deepagents/deepagents/profiles/harness/_openai_codex.py",
+            "start": 27,
+            "end": 88,
+            "label": "Exact planning profile matches and fresh middleware factory"
+          }
+        ]
+      },
+      {
+        "id": "sdk-layers-public-api",
+        "title": "Reference: public imports and extension boundaries",
+        "body": "<p>Use this reference when choosing an import, rather than treating the export list as execution steps. The supported surface is smaller than the set of useful implementation symbols; not every class has a package-root import.</p><ul><li><strong>Package-root exports.</strong> These include the constructor and <code>DeepAgentState</code>; declarative, compiled, and async subagent types; filesystem middleware and permission/tool-name types; memory and rubric middleware; provider/harness profile objects and registration functions; and <code>__version__</code>.</li><li><strong>Middleware-package exports.</strong> <code>deepagents.middleware</code> exposes <code>SkillsMiddleware</code>, <code>SkillsState</code>, <code>SkillMetadata</code>, <code>TaskEvent</code>, <code>UnsupportedContentMiddleware</code>, the summarization alias, manual compaction middleware/factory, and rubric result/schema types.</li><li><strong>Internal and compatibility boundaries.</strong> Graph assembly uses <code>PatchToolCallsMiddleware</code>, but the middleware package's <code>__all__</code> does not list it. <code>create_summarization_middleware</code> is the internal graph factory; <code>create_summarization_tool_middleware</code> is the exposed manual-compaction factory. The old <code>middleware.permissions</code> module only re-exports <code>FilesystemPermission</code>; it is not another permissions engine.</li></ul><aside class=\"callout\"><p><strong>Import rule:</strong> implementation visibility does not make a private helper a stable extension point. Check actual exports and import each supported surface at its declared level.</p></aside>",
+        "sources": [
+          {
+            "path": "libs/deepagents/deepagents/__init__.py",
+            "start": 3,
+            "end": 48,
+            "label": "Root public exports"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/__init__.py",
+            "start": 50,
+            "end": 114,
+            "label": "Middleware public exports"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/permissions.py",
+            "start": 1,
+            "end": 5,
+            "label": "Compatibility-only permissions module"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "sdk-construction",
+    "group": "Harness internals",
+    "title": "create_deep_agent, from parameters to middleware",
+    "kicker": "Exact construction defaults",
+    "summary": "Follow every public argument into model resolution, prompts, child-agent assembly, and the final ordered middleware stack.",
+    "readingMinutes": 17,
+    "sections": [
+      {
+        "id": "sdk-construction-parameters",
+        "title": "Build a minimal agent, then explore its options",
+        "body": "<p>With model credentials configured, this illustrative example constructs and invokes an agent. The invocation seeds a virtual brief; it does not read the host filesystem. Model/tool choices are not guaranteed, and this snippet is not an executed trace.</p><pre><code class=\"language-python\">from deepagents import create_deep_agent\n\nagent = create_deep_agent(\n    model=\"openai:gpt-5.5\",\n    system_prompt=\"Read the brief and save the requested report.\",\n)\nresult = agent.invoke({\n    \"messages\": [{\n        \"role\": \"user\",\n        \"content\": \"Read /notes/brief.txt and write /notes/report.txt.\",\n    }],\n    \"files\": {\n        \"/notes/brief.txt\": {\n            \"content\": \"Write a concise report about test coverage.\",\n            \"encoding\": \"utf-8\",\n        },\n    },\n})</code></pre><p>The constructor supplies the harness; the invocation supplies the task and initial files. With the omitted backend, files live in <code>StateBackend</code>, not automatically in the host's <code>/notes</code> directory. A prompt names desired behavior, not guaranteed model actions.</p><h3>Constructor reference</h3><p>Only <code>model=None</code> and <code>tools=None</code> accept positional arguments; everything else is keyword-only. Distinguish omission from an explicitly empty collection: <code>middleware=()</code> is the sequence with an empty-tuple default, while optional collections default to <code>None</code>.</p><div class=\"table-wrap\"><table><thead><tr><th>Arguments and exact defaults</th><th>Construction responsibility</th></tr></thead><tbody><tr><td><code>model=None</code>, <code>tools=None</code></td><td>Resolve the chat model; make caller tools additive to middleware-injected tools.</td></tr><tr><td><code>system_prompt=None</code>, <code>middleware=()</code></td><td>Assemble authored prompt and merge caller middleware by name.</td></tr><tr><td><code>subagents=None</code></td><td>Partition remote specs by <code>graph_id</code>, recognize compiled specs by <code>runnable</code>, and prepare declarative specs.</td></tr><tr><td><code>skills=None</code>, <code>memory=None</code></td><td>Install optional source-loading middleware. An explicit empty list still installs that middleware.</td></tr><tr><td><code>permissions=None</code>, <code>backend=None</code>, <code>interrupt_on=None</code></td><td>Choose <code>StateBackend()</code> when omitted, configure tool-level rules, derive approval predicates, and merge explicit interrupts.</td></tr><tr><td><code>response_format=None</code>, <code>state_schema=None</code>, <code>context_schema=None</code></td><td>Forward structured output and schemas to LangChain; use <code>DeepAgentState</code> as the default graph state.</td></tr><tr><td><code>checkpointer=None</code>, <code>store=None</code>, <code>cache=None</code></td><td>Forward persistence, cross-thread store, and graph cache objects. They are not interchangeable.</td></tr><tr><td><code>debug=False</code>, <code>name=None</code></td><td>Forward graph debugging and naming; name is also recorded in graph metadata.</td></tr></tbody></table></div><aside class=\"callout\"><p><strong>Not a safety budget:</strong> there is no constructor argument for a maximum number of children, a total dollar budget, a global execution timeout, or automatic retry of arbitrary failures. Those behaviors must come from explicitly configured components, not from interpreting the high graph recursion limit as a safety budget.</p></aside>",
+        "sources": [
+          {
+            "path": "libs/deepagents/deepagents/graph.py",
+            "start": 289,
+            "end": 309,
+            "label": "Exact public signature"
+          },
+          {
+            "path": "libs/deepagents/deepagents/backends/state.py",
+            "start": 58,
+            "end": 80,
+            "label": "Seed virtual files through invocation input"
+          },
+          {
+            "path": "libs/deepagents/deepagents/graph.py",
+            "start": 671,
+            "end": 698,
+            "label": "Backend and optional skill sources"
+          },
+          {
+            "path": "libs/deepagents/deepagents/graph.py",
+            "start": 936,
+            "end": 970,
+            "label": "Optional middleware conditions"
+          },
+          {
+            "path": "libs/deepagents/deepagents/graph.py",
+            "start": 1008,
+            "end": 1030,
+            "label": "Arguments forwarded to LangChain"
+          }
+        ]
+      },
+      {
+        "id": "sdk-construction-models",
+        "title": "Model resolution: strings and objects take different paths",
+        "body": "<p>Model strings and initialized objects take different construction paths. Keep the original string, resolved class/identifier, and matching profile key separate when debugging.</p><ol class=\"explain-steps\"><li><strong>Omitted model: deprecated fallback.</strong> <code>model=None</code> emits a deprecation warning and directly builds <code>ChatAnthropic(model_name=\"claude-sonnet-4-6\")</code>—not a moving “latest Sonnet” alias. Removal is scheduled for Deep Agents 1.0.0. The separately deprecated <code>get_default_model</code> helper has its own warning-deduplication path, which construction intentionally avoids consuming.</li><li><strong>String: provider-aware initialization.</strong> <code>resolve_model</code> calls <code>init_chat_model(spec, **apply_provider_profile(spec))</code>. Provider profiles can modify constructor kwargs and run pre-initialization hooks; the built-in OpenAI profile registers <code>use_responses_api=True</code>.</li><li><strong>Object: preserve the exact instance.</strong> An initialized <code>BaseChatModel</code> is returned unchanged, bypassing provider construction defaults but not harness-profile selection. Pass an explicit object for settings such as <code>use_responses_api=False</code> or Responses retention controls; an <code>openai:...</code> string may otherwise select a different transport.</li></ol><aside class=\"callout\"><p><strong>No universal retention policy:</strong> the source explains caller configuration but does not universally turn off storage. Constructor defaults and runtime middleware effects are separate stages.</p></aside>",
+        "sources": [
+          {
+            "path": "libs/deepagents/deepagents/graph.py",
+            "start": 147,
+            "end": 189,
+            "label": "Exact default model and deprecation"
+          },
+          {
+            "path": "libs/deepagents/deepagents/graph.py",
+            "start": 628,
+            "end": 649,
+            "label": "Default versus explicit model branch"
+          },
+          {
+            "path": "libs/deepagents/deepagents/_models.py",
+            "start": 35,
+            "end": 57,
+            "label": "String and object resolution"
+          },
+          {
+            "path": "libs/deepagents/deepagents/profiles/provider/_openai.py",
+            "start": 19,
+            "end": 24,
+            "label": "Responses API default"
+          },
+          {
+            "path": "libs/deepagents/deepagents/graph.py",
+            "start": 341,
+            "end": 351,
+            "label": "Caller-configured OpenAI transport/retention"
+          }
+        ]
+      },
+      {
+        "id": "sdk-construction-prompts",
+        "title": "Authored prompts and dynamic prompt fragments are different",
+        "body": "<p>The authored main prompt is <code>USER → BASE → SUFFIX</code>. That construction-time prompt is only one source of the system content a provider eventually receives.</p><ol class=\"explain-steps\"><li><strong>Assemble authored content.</strong> The caller's <code>system_prompt</code> comes first, followed by the harness profile's <code>base_system_prompt</code>, if present, then its suffix. Profile application starts with an empty string: this revision has no unconditional authored base personality. Deprecated <code>BASE_AGENT_PROMPT</code> attribute access remains, but the constructor does not insert it.</li><li><strong>Preserve content-block boundaries.</strong> For a caller <code>SystemMessage</code>, construction keeps existing content blocks and appends profile content as another text block, preserving cache markers. Later middleware can append blocks too. <code>append_to_system_message</code> copies existing blocks, adds two leading newlines when necessary, and returns a new <code>SystemMessage</code>.</li><li><strong>Add request-time fragments.</strong> Skills inject the loaded catalog; memory injects loaded instructions. With execution active, filesystem middleware can append essential composite-backend virtual-to-host routing. Tool-usage prose is generally omitted because tool descriptions already supply it, though callers can explicitly provide middleware-specific prose.</li></ol><aside class=\"callout\"><p><strong>Debug both layers:</strong> an empty authored prompt does not mean no provider system content. Trace construction and dynamic fragments separately; for cache misses, also inspect content-block boundaries and whether middleware rewrites an inherited prefix instead of appending.</p></aside>",
+        "sources": [
+          {
+            "path": "libs/deepagents/deepagents/graph.py",
+            "start": 128,
+            "end": 144,
+            "label": "Legacy prompt is deprecated access only"
+          },
+          {
+            "path": "libs/deepagents/deepagents/graph.py",
+            "start": 671,
+            "end": 691,
+            "label": "Authored prompt assembly and dynamic guidance"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/_utils.py",
+            "start": 14,
+            "end": 31,
+            "label": "Block-preserving append helper"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/filesystem.py",
+            "start": 3391,
+            "end": 3406,
+            "label": "Dynamic routing fragment"
+          },
+          {
+            "path": "libs/deepagents/deepagents/profiles/harness/harness_profiles.py",
+            "start": 783,
+            "end": 817,
+            "label": "Profile prompt application"
+          }
+        ]
+      },
+      {
+        "id": "sdk-construction-stack",
+        "title": "The actual main stack, including the private notifier",
+        "body": "<p>The following is the resulting registration order before replacements or profile exclusions—not a universal hook-execution direction. LangChain owns lifecycle and wrapper composition.</p><ol class=\"explain-steps\"><li><strong>Start the core.</strong> Register <code>FilesystemMiddleware</code>, then <code>SubAgentMiddleware</code> if inline children exist. Follow with <code>_ParentNotifierMiddleware</code>, model-aware summarization, and <code>PatchToolCallsMiddleware</code>. Append <code>AsyncSubAgentMiddleware</code> when remote/background specs exist.</li><li><strong>Place caller additions at the core boundary.</strong> Novel caller middleware is spliced after the final core member, before the profile/skills/cache/memory tail. An existing <code>.name</code> instead replaces its slot in place; caller additions are not simply appended at the very end.</li><li><strong>Build the profile and caching tail.</strong> Add harness <code>extra_middleware</code>, optional <code>SkillsMiddleware</code>, then provider prompt caching. The caching helper always adds a lazy Anthropic wrapper and conditionally adds Bedrock/Fireworks integrations when installed. Missing optional integrations are handled; unrelated import errors propagate.</li><li><strong>Complete the final layers.</strong> Add optional <code>MemoryMiddleware(add_cache_control=True)</code>, optional LangChain HITL middleware, and <code>UnsupportedContentMiddleware</code>. When the profile excludes tool names, a final tool-exclusion wrapper follows custom middleware.</li></ol><aside class=\"callout\"><p><strong>Read executable assembly:</strong> the graph docstring's public list omits the private notifier; the append at lines 928–934 is authoritative. Registration order describes the assembled stack, not the temporal order of every construction operation.</p></aside><p>The placement lets skills inspect the actual routed model and the conversation after outer compaction/routing. Unsupported-content filtering likewise uses active request-model capabilities, not just the constructor's original model.</p>",
+        "sources": [
+          {
+            "path": "libs/deepagents/deepagents/graph.py",
+            "start": 906,
+            "end": 995,
+            "label": "Executable full main stack"
+          },
+          {
+            "path": "libs/deepagents/deepagents/graph.py",
+            "start": 216,
+            "end": 256,
+            "label": "Name-based replacement and insertion"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/_prompt_caching.py",
+            "start": 90,
+            "end": 126,
+            "label": "Conditional provider caching stack"
+          }
+        ]
+      },
+      {
+        "id": "sdk-construction-child-defaults",
+        "title": "Default general-purpose is not a recursive clone",
+        "body": "<p>The automatic <code>general-purpose</code> child is a helper for a bounded task: for example, read <code>/notes/brief.txt</code>, draft <code>/notes/report.txt</code>, and report the result to the parent. Its dedicated final-report prompt makes the report the intended communication boundary. It is not a recursive clone with every parent capability.</p><h3>Normal inherited configuration</h3><p>The child uses the parent's resolved model/backend, permissions, and interrupt configuration. It gets caller additional tools and its own filesystem middleware. Its base stack is filesystem, summarization, and patching, then profile middleware, inherited skill sources, and caching.</p><p>Only caller middleware matching an existing default-child slot by name replaces that slot. Arbitrary parent middleware, parent memory, and another automatic delegation tree are not inherited. Profiles can override its description/prompt; a GP-specific prompt replaces profile BASE but still receives the profile suffix.</p><details><summary>Reference: partitioning and suppression rules</summary><ol class=\"explain-steps\"><li><strong>Partition caller specs.</strong> A <code>graph_id</code> spec goes to background middleware; a <code>runnable</code> spec stays as a compiled inline agent; remaining declarative specs are prepared individually. This happens before deciding whether to add the default child.</li><li><strong>Decide whether to add the default.</strong> An inline child named exactly <code>general-purpose</code>, or <code>general_purpose_subagent.enabled=False</code> in the profile, suppresses automatic creation. A remote child belongs to a separate collection and does not count as the inline override.</li></ol></details><aside class=\"callout\"><p><strong>Removing <code>task</code>:</strong> disable the automatic child and provide no inline subagents; remote async tools remain independent. Excluding required <code>SubAgentMiddleware</code> is not an alternative—construction forbids it.</p></aside>",
+        "sources": [
+          {
+            "path": "libs/deepagents/deepagents/graph.py",
+            "start": 703,
+            "end": 718,
+            "label": "Partition child types"
+          },
+          {
+            "path": "libs/deepagents/deepagents/graph.py",
+            "start": 835,
+            "end": 904,
+            "label": "Exact automatic child rules and stack"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/subagents.py",
+            "start": 399,
+            "end": 402,
+            "label": "Final-report child prompt"
+          },
+          {
+            "path": "libs/deepagents/deepagents/graph.py",
+            "start": 259,
+            "end": 273,
+            "label": "Protected scaffolding"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "sdk-state",
+    "group": "Harness internals",
+    "title": "State, messages and the LangGraph boundary",
+    "kicker": "What persists versus what the model sees",
+    "summary": "Learn the message delta reducer, middleware state, checkpoint/stream separation, and the approval-resume contract.",
+    "readingMinutes": 14,
+    "sections": [
+      {
+        "id": "sdk-state-channel",
+        "title": "Start with state, reducers, and checkpoints",
+        "body": "<p><strong>State</strong> is the graph's working record: messages plus fields contributed by your schema and middleware. A <strong>reducer</strong> combines incoming writes with an existing field value. A <strong>checkpoint</strong> is a saved graph-state position that persistence infrastructure can restore; it is not a token-stream transcript.</p><p>Messages need a reducer because a write may add a new turn or revise an existing message. Identity, not matching text, decides which operation occurs. These illustrative records show the rule, not observed model output.</p><div class=\"table-wrap\"><table><thead><tr><th>Before</th><th>Incoming write</th><th>After</th></tr></thead><tbody><tr><td><code>[u1: Read the brief]</code></td><td><code>a1: I will read it</code></td><td><code>[u1: Read the brief, a1: I will read it]</code> — new ID appends.</td></tr><tr><td><code>[u1: Read the brief, a1: I will read it]</code></td><td><code>a1: Report saved</code></td><td><code>[u1: Read the brief, a1: Report saved]</code> — same ID replaces in place.</td></tr><tr><td><code>[u1: Read the brief, a1: Report saved]</code></td><td><code>RemoveMessage(id=\"a1\")</code></td><td><code>[u1: Read the brief]</code> — a tombstone removes the known ID.</td></tr></tbody></table></div><p><code>DeepAgentState</code> extends LangChain <code>AgentState</code>, replacing the <code>messages</code> annotation with <code>DeltaChannel(_messages_delta_reducer, snapshot_frequency=50)</code>. A delta channel records writes between snapshots. Its stated aim is linear checkpoint growth in accumulated writes rather than quadratic growth from repeatedly saving full history; LangGraph owns delta storage and replay.</p><details><summary>Reference: normalization, full resets, and replay identity</summary><ol class=\"explain-steps\"><li><strong>Normalize inputs.</strong> Flatten list writes, but treat a dict, string, tuple, or message as one message-like item. Convert raw inputs to typed messages, using an empty base when replay has none.</li><li><strong>Honor the last full reset.</strong> If writes contain <code>RemoveMessage(id=REMOVE_ALL_MESSAGES)</code>, the last sentinel discards previous state and every earlier write in that batch. Then build the message-ID-to-position index.</li><li><strong>Merge by identity.</strong> An ordinary message with an existing ID replaces that entry; an unseen ID appends. A tombstone removes a known entry. A message without an ID appends without deduplication.</li></ol><p>Replay deliberately generates no random IDs; LangGraph stamps stable IDs before checkpoint serialization. A custom component writing chunk objects cannot assume chunk-coercion behavior this reducer intentionally omits.</p></details><aside class=\"callout\"><p><strong>Tokens are not writes:</strong> a UI may receive many streamed chunks for one eventual full assistant message. The reducer handles full state writes, not a second copy of every displayed token.</p></aside>",
+        "sources": [
+          {
+            "path": "libs/deepagents/deepagents/graph.py",
+            "start": 77,
+            "end": 80,
+            "label": "DeltaChannel state annotation"
+          },
+          {
+            "path": "libs/deepagents/deepagents/_messages_reducer.py",
+            "start": 1,
+            "end": 16,
+            "label": "ID and streaming boundary"
+          },
+          {
+            "path": "libs/deepagents/deepagents/_messages_reducer.py",
+            "start": 31,
+            "end": 90,
+            "label": "Full reducer algorithm"
+          }
+        ]
+      },
+      {
+        "id": "sdk-state-projections",
+        "title": "Raw state, effective history and output streams are not equivalent",
+        "body": "<p>Keep three views separate: the durable working record, the input actually sent to a model, and the events shown to a consumer. They answer different questions. These are projections of execution, not stages of a universal event envelope.</p><div class=\"table-wrap\"><table><thead><tr><th>View</th><th>What it represents</th><th>Illustrative report task</th></tr></thead><tbody><tr><td><strong>Raw graph state</strong></td><td>The canonical message channel and other state fields, persisted when a checkpointer is configured.</td><td>The original request and earlier file-tool messages remain in raw history. Summarization stores a private event with an absolute cutoff and summary rather than deleting that history.</td></tr><tr><td><strong>Effective model request</strong></td><td>The request after middleware projection.</td><td>The next model call may see <code>[summary, *messages[cutoff:]]</code> instead of every old read, plus recent report-writing messages.</td></tr><tr><td><strong>Execution output</strong></td><td>Framework-selected events or projections delivered to consumers.</td><td>A UI displays answer chunks or state updates, but cannot recover canonical checkpoints by blindly concatenating text chunks.</td></tr></tbody></table></div><p>Other projections replace large human text with offload previews, hydrate binary references, or substitute unsupported-media notices. Unsupported-content filtering copies request messages without overwriting original thread media; a later capable model can see it again. A message absent from a provider request is not necessarily absent from storage.</p><p><code>checkpointer</code>, <code>store</code>, <code>cache</code>, and <code>context_schema</code> are forwarded to LangChain. The checkpointer persists graph state between runs; the store is a separate persistent-storage interface. LangGraph runtime supplies run context, rather than treating it as freely mutable conversation state.</p><aside class=\"callout\"><p><strong>Ownership boundary:</strong> the constructor implements neither a stream server, transport framing, nor a durable database adapter. These remain framework/application responsibilities. When debugging a “missing” message, inspect raw state and final request projection separately.</p></aside>",
+        "sources": [
+          {
+            "path": "libs/deepagents/deepagents/_messages_reducer.py",
+            "start": 3,
+            "end": 15,
+            "label": "Streaming on output side"
+          },
+          {
+            "path": "libs/deepagents/deepagents/graph.py",
+            "start": 587,
+            "end": 606,
+            "label": "Runtime services forwarded"
+          },
+          {
+            "path": "libs/deepagents/deepagents/graph.py",
+            "start": 1008,
+            "end": 1020,
+            "label": "Final runtime handoff"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/summarization.py",
+            "start": 919,
+            "end": 961,
+            "label": "Effective conversation projection"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/unsupported_content.py",
+            "start": 117,
+            "end": 130,
+            "label": "Original media remains in state"
+          }
+        ]
+      },
+      {
+        "id": "sdk-state-schemas",
+        "title": "Schemas are merged; reducers are part of concurrency correctness",
+        "body": "<p><code>create_agent</code> receives the caller schema or <code>DeepAgentState</code>, alongside middleware-contributed schemas. Read the resulting state contract in three parts.</p><ol class=\"explain-steps\"><li><strong>Preserve the message channel.</strong> Middleware adds filesystem files, skill metadata, memory, async task records, private summary bookkeeping, and optional rubric state. Extensions should inherit <code>DeepAgentState</code> to keep its delta channel. This <code>TypedDict</code> constraint is enforced by typing, not a runtime <code>issubclass</code> check.</li><li><strong>Respect child schema ownership.</strong> Declarative inline children receive the custom schema at compilation; precompiled children and remote graphs already own their schemas. Normal inline delegation filters reserved/private fields, passes other state, and merges changed allowed fields back—it is not “send only one field.” Parallel-writable fields need suitable reducers or LangGraph can raise <code>InvalidUpdateError</code>.</li><li><strong>Make privacy annotations resolvable.</strong> Discovery uses runtime-resolved type hints and <code>PrivateStateAttr</code>. References imported only under <code>TYPE_CHECKING</code> can fail resolution. The implementation warns and skips privacy discovery for that schema rather than failing construction.</li></ol><aside class=\"callout\"><p><strong>Privacy failure has consequences:</strong> unresolved fields may then be forwarded to and merged from children. These annotations govern SDK state routing; they are neither cryptographic isolation nor authorization.</p></aside>",
+        "sources": [
+          {
+            "path": "libs/deepagents/deepagents/graph.py",
+            "start": 548,
+            "end": 574,
+            "label": "Schema and parallel-write contract"
+          },
+          {
+            "path": "libs/deepagents/deepagents/graph.py",
+            "start": 624,
+            "end": 626,
+            "label": "Typing-only schema enforcement"
+          },
+          {
+            "path": "libs/deepagents/deepagents/graph.py",
+            "start": 989,
+            "end": 995,
+            "label": "Collect private fields after middleware replacement"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/_state.py",
+            "start": 13,
+            "end": 49,
+            "label": "Runtime privacy inspection and warning"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/subagents.py",
+            "start": 747,
+            "end": 759,
+            "label": "Allowed changed state returned"
+          }
+        ]
+      },
+      {
+        "id": "sdk-state-hitl",
+        "title": "Human approval is a resumable graph transition",
+        "body": "<p>Human approval is a resumable graph transition, not simply an assistant asking a question. The constructor combines permission-derived interrupts with explicit <code>interrupt_on</code>.</p><ol class=\"explain-steps\"><li><strong>Build the approval policy.</strong> Explicit entries win per tool name, including a disabling value; an empty merge installs no HITL middleware. Permission-derived configs use path-aware <code>when</code> predicates and offer <code>approve</code>, <code>edit</code>, <code>reject</code>, and <code>respond</code>. Edits re-enter filesystem deny checks; <code>respond</code> returns a result without executing the tool.</li><li><strong>Invoke and inspect the actual interrupt.</strong> The repository integration test constructs an agent with a memory checkpointer, invokes with a stable <code>configurable.thread_id</code>, then reads <code>agent.get_state(config).interrupts</code>. It checks requested action names and allowed decisions, rather than interpreting any assistant question as an interrupt.</li><li><strong>Resume the same thread.</strong> The test uses <code>Command(resume={\"decisions\": [...]})</code> on that thread. Resuming another thread does not approve the interrupted action. These are source test assertions, not provider-backed flows executed by this website.</li></ol><aside class=\"callout\"><p><strong>Child policy is separate:</strong> declarative children inherit parent <code>interrupt_on</code> unless their own value replaces the mapping. Compiled/remote children do not inherit it; configure their graph/server. Distinguish graph interruption, clarification questions, and a background child's <code>waiting</code> status in the UI.</p></aside>",
+        "sources": [
+          {
+            "path": "libs/deepagents/deepagents/graph.py",
+            "start": 192,
+            "end": 208,
+            "label": "Explicit interrupts override generated entries"
+          },
+          {
+            "path": "libs/deepagents/deepagents/graph.py",
+            "start": 797,
+            "end": 801,
+            "label": "Declarative child interrupt inheritance"
+          },
+          {
+            "path": "libs/deepagents/deepagents/graph.py",
+            "start": 965,
+            "end": 970,
+            "label": "Install HITL on non-empty merged config"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/_fs_interrupt.py",
+            "start": 174,
+            "end": 203,
+            "label": "Generated approval choices"
+          },
+          {
+            "path": "libs/deepagents/tests/integration_tests/test_hitl.py",
+            "start": 64,
+            "end": 106,
+            "label": "Checkpointed approve/resume test"
+          },
+          {
+            "path": "libs/deepagents/deepagents/graph.py",
+            "start": 530,
+            "end": 543,
+            "label": "Compiled and remote policy boundary"
+          }
+        ]
+      },
+      {
+        "id": "sdk-state-streaming",
+        "title": "Native streaming projections preserve the child boundary",
+        "body": "<p>Start with the compiled graph's streaming API. <code>.astream(..., stream_mode=\"messages\")</code> exposes message chunks with metadata; <code>stream_mode=\"updates\"</code> exposes state updates. Selecting multiple modes or requesting subgraphs changes the yielded shape. Choose the contract before writing the consumer, rather than treating every item as answer text.</p><p>For the report task, displaying an assistant chunk is a UI action; applying a completed message write is a state action. A child may also have its own stream. Rendering that child trace does not mean its full transcript becomes parent history: the final tool report remains the intentional communication boundary.</p><h3>Native child-stream consumption</h3><ol class=\"explain-steps\"><li><strong>Retain the child handle.</strong> The repository's native <code>.astream_events(..., version=\"v3\")</code> test receives a typed subagent handle with name, cause referencing the parent tool-call ID, graph path under the tool node, terminal status, and output accessor.</li><li><strong>Drain parent and child projections concurrently.</strong> Tests check <code>subagents</code>, <code>subgraphs</code>, <code>messages</code>, <code>tool_calls</code>, and <code>values</code>. Fork-private result text appears in the child projection but not the parent's. Explicit consumption drives the stream pump; token chunks are not canonical state writes.</li><li><strong>Preserve failure.</strong> A child model failure propagates; draining can raise while its handle reaches <code>status=\"failed\"</code> with an error. Keep identity/error state rather than showing a successful empty answer.</li></ol><p>These are source test assertions, not a live streaming-model exercise by this website. Typed native event handles—including synchronous <code>stream_events</code>—are not the same API as <code>.astream</code> mode tuples, nor a separately implemented Deep Agents WebSocket protocol.</p><details><summary>Advanced reference: application adapters and background notification metadata</summary><div class=\"table-wrap\"><table><thead><tr><th>Contract</th><th>Owner and shape</th></tr></thead><tbody><tr><td>Code <code>RemoteAgent.astream</code></td><td>The Code client adapter over LangGraph <code>RemoteGraph</code> yields <code>(namespace, stream_mode, data)</code> triples and defaults to <code>[\"messages\", \"updates\"]</code>. It converts message dicts to LangChain objects and interrupt updates to adapter values. This is application transport framing, not the native graph's fixed universal shape.</td></tr><tr><td>Background <code>TaskEvent</code></td><td>SDK async-subagent notification metadata requires <code>task_id</code> (child thread), <code>agent_name</code>, and <code>status</code>; <code>run_id</code> is optional. Source is <code>async_subagent</code>. Status is <code>success</code>, <code>error</code>, <code>timeout</code>, <code>cancelled</code>, or <code>waiting</code>. These describe ended/paused work, not every tracked running/pending state. <strong>Beta: shape may change.</strong></td></tr></tbody></table></div><p>Read notification data through <code>get_notification_metadata(message).get(\"data\")</code>; the older <code>additional_kwargs[\"deepagents_notification\"]</code> key is deprecated. This beta notification contract is not a stability promise.</p></details><aside class=\"callout\"><p><strong>No universal Deep Agents event envelope:</strong> preserve the exact owning API and version. Native <code>version=\"v3\"</code> projections, <code>.astream</code> modes, Code transport triples, and background <code>TaskEvent</code> metadata are distinct contracts.</p></aside>",
+        "sources": [
+          {
+            "path": "libs/deepagents/tests/unit_tests/test_deep_agent_streaming.py",
+            "start": 193,
+            "end": 255,
+            "label": "Native projections and parent/child isolation assertions"
+          },
+          {
+            "path": "libs/deepagents/tests/unit_tests/test_deep_agent_streaming.py",
+            "start": 297,
+            "end": 356,
+            "label": "Concurrent draining and failure assertions"
+          },
+          {
+            "path": "libs/code/deepagents_code/client/remote_client.py",
+            "start": 837,
+            "end": 938,
+            "label": "RemoteAgent streaming modes and normalized transport tuples"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/async_subagents.py",
+            "start": 475,
+            "end": 513,
+            "label": "Beta TaskEvent notification schema and optional result details"
+          },
+          {
+            "path": "libs/deepagents/tests/unit_tests/test_subagents.py",
+            "start": 2019,
+            "end": 2056,
+            "label": "Mode-specific message pairs, subgraph triples, and parent report boundary"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "sdk-filesystem",
+    "group": "Harness internals",
+    "title": "Tools, filesystem middleware and offloading",
+    "kicker": "The request-to-backend adapter",
+    "summary": "Understand tool visibility, file pagination, guarded mutations, execution capture, and reversible context reduction.",
+    "readingMinutes": 18,
+    "sections": [
+      {
+        "id": "sdk-filesystem-tools",
+        "title": "Registered tools versus tools offered to this model",
+        "body": "<p>Filesystem tools have three separate control layers: factory registration, request-time capability visibility, and policy rejection. Caller <code>tools=</code> on <code>create_deep_agent</code> adds tools; it does not replace middleware tools.</p><ol class=\"explain-steps\"><li><strong>Choose registered factories.</strong> The actual order is <code>ls</code>, <code>read_file</code>, <code>write_file</code>, <code>edit_file</code>, <code>delete</code>, <code>glob</code>, <code>grep</code>, <code>execute</code>; the constructor's introductory list omits <code>delete</code>. Middleware <code>tools=None</code> selects all opted-in factories, as does <code>tools=\"all\"</code>. A list is a construction-time allowlist and must include <code>read_file</code>; excluded factories are not registered.</li><li><strong>Filter for backend capability.</strong> Before a model call, unsupported execution removes <code>execute</code>, and unsupported deletion removes <code>delete</code>, from offered tools. Grep/execute descriptions are adjusted to visible capabilities. The tools can remain in the compiled registry even when hidden from that request.</li><li><strong>Apply deliberate restrictions.</strong> Replace <code>FilesystemMiddleware</code> with an allowlisted instance to restrict filesystem registration. A harness exclusion instead removes schemas late and rejects direct calls by excluded name. Neither mechanism should be confused with capability detection.</li></ol><aside class=\"callout\"><p><strong>No implied shell:</strong> an <code>execute</code> factory does not mean the selected backend provides an operating-system shell.</p></aside>",
+        "sources": [
+          {
+            "path": "libs/deepagents/deepagents/middleware/filesystem.py",
+            "start": 1969,
+            "end": 1977,
+            "label": "Read tool requirement and validation"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/filesystem.py",
+            "start": 2011,
+            "end": 2044,
+            "label": "Tool registration and order"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/filesystem.py",
+            "start": 3057,
+            "end": 3081,
+            "label": "Capability detection"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/filesystem.py",
+            "start": 3362,
+            "end": 3408,
+            "label": "Request-time filtering and descriptions"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/_tool_exclusion.py",
+            "start": 53,
+            "end": 101,
+            "label": "Policy gate"
+          }
+        ]
+      },
+      {
+        "id": "sdk-filesystem-read",
+        "title": "File contracts: offsets, literal search, and binary routing",
+        "body": "<p>Choose the operation by the question you need answered. Reading a page, finding matching files, and replacing text are independent contracts—not three required steps in a file workflow.</p><p>For an illustrative brief read, <code>read_file(file_path=\"/notes/brief.txt\", offset=0, limit=20)</code> asks for the first 20 lines. A later <code>offset=20</code> continues from the next zero-based window. The displayed line numbers help the model locate content; they do not change the offset convention.</p><ul><li><strong>Read a numbered window.</strong> <code>read_file</code> defaults to zero-based <code>offset=0</code> and <code>limit=100</code>. It validates an absolute path, checks read permission, and calls <code>backend.read(path, offset=offset, limit=limit)</code>. Pagination metadata drives bounded numbered rendering; already paginated lines are not sliced again. A blank window does not prove the whole file is empty.</li><li><strong>Route by actual result shape.</strong> Backend errors or missing data yield error-status tool messages. Video sampling precedes generic binary handling. <code>encoding=\"base64\"</code> means binary even with an unknown extension; extensions select media block type, with a generic file fallback. Binary bytes are never line-numbered as text. Media carries <code>read_file_path</code> metadata for later capability notices.</li><li><strong>Search literal text.</strong> <code>grep</code> searches literal strings, not regexes. Modes are default <code>files_with_matches</code>, <code>content</code>, and <code>count</code>; the middleware match cap defaults to 1,000, overridable by positive per-call <code>max_count</code>.</li><li><strong>Replace an exact occurrence.</strong> <code>edit_file</code> requires exact <code>old_string</code>, a different replacement, and uniqueness unless <code>replace_all=True</code> (default: <code>False</code>).</li></ul><aside class=\"callout\"><p><strong>Glob caveat:</strong> glob matching has its own slash, root, and dot-directory semantics. A copied shell glob may select a different set; check the tool schema.</p></aside>",
+        "sources": [
+          {
+            "path": "libs/deepagents/deepagents/middleware/filesystem.py",
+            "start": 1078,
+            "end": 1093,
+            "label": "Read defaults and character estimate"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/filesystem.py",
+            "start": 1364,
+            "end": 1483,
+            "label": "Public filesystem tool schemas"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/filesystem.py",
+            "start": 2177,
+            "end": 2296,
+            "label": "Read routing and pagination"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/filesystem.py",
+            "start": 1898,
+            "end": 1903,
+            "label": "Default grep cap"
+          }
+        ]
+      },
+      {
+        "id": "sdk-filesystem-mutations",
+        "title": "Mutation safety is local, explicit and not a sandbox",
+        "body": "<p>Mutation guards and path permissions are local tool-boundary controls, not transactions or a sandbox. Their scope matters as much as their defaults.</p><ol class=\"explain-steps\"><li><strong>Reject same-batch mutation races.</strong> Before any tool dispatch, middleware checks repeated mutations to the same normalized path in the latest assistant tool-call batch. The earliest runs; later same-path write/edit/delete calls receive errors. Independent invocations, other processes, and direct backend calls still need their own consistency model.</li><li><strong>Evaluate ordered path policy.</strong> The first matching permission rule wins; unmatched operations are allowed. Enforcement covers this middleware's built-in tools, not all backend methods. Relevant filesystem backends resolve real paths for symlink aliases. A custom Python tool reading the backend directly must enforce policy itself.</li><li><strong>Refuse unsupported execution restrictions.</strong> On execution-capable backends, ordinary permission rules not confined to supported composite routes cause construction to raise <code>NotImplementedError</code>: permission enforcement for <code>execute</code> is not implemented. A shell can bypass guarded file tools, so tool-level restrictions cannot honestly be advertised as shell isolation.</li><li><strong>Keep replacement policy consistent.</strong> Unconfigured replacement filesystem middleware inherits agent-local rules; conflicting nonempty rules fail graph assembly. Deprecated <code>_permissions</code> cannot be supplied alongside <code>permissions</code>.</li></ol><aside class=\"callout\"><p><strong>Security order:</strong> choose backend isolation and tool exposure deliberately before adding approval prompts. Do not bypass the constructor's refusal and mistake the remaining path checks for execution containment.</p></aside>",
+        "sources": [
+          {
+            "path": "libs/deepagents/deepagents/middleware/filesystem.py",
+            "start": 200,
+            "end": 226,
+            "label": "Parallel same-path mutation guard"
+          },
+          {
+            "path": "libs/deepagents/deepagents/graph.py",
+            "start": 494,
+            "end": 518,
+            "label": "Permission semantics and backend boundary"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/filesystem.py",
+            "start": 422,
+            "end": 464,
+            "label": "Real-path permission checks"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/filesystem.py",
+            "start": 1957,
+            "end": 1968,
+            "label": "Deprecated permission parameter"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/filesystem.py",
+            "start": 2053,
+            "end": 2063,
+            "label": "Execution permission refusal"
+          },
+          {
+            "path": "libs/deepagents/deepagents/graph.py",
+            "start": 241,
+            "end": 249,
+            "label": "Replacement middleware permission handling"
+          }
+        ]
+      },
+      {
+        "id": "sdk-filesystem-text-offload",
+        "title": "Large text offload: pointer plus preview, not silent deletion",
+        "body": "<p><strong>A huge tool result normally becomes stored text plus a small model-visible pointer and preview.</strong> Deep Agents does not automatically send the whole result to the next model call, summarize every part, or guarantee permanent retention.</p><h3>Worked example: a 100K-token result and a 100K model window</h3><p><strong>Illustrative, not an executed model trace:</strong> a custom research tool with call ID <code>call_brief</code> returns 400,000 characters of text. Assume ordinary artifact routing, default middleware, and a successful backend write. Here “100K” means estimated tokens, not 100,000 characters.</p><div class=\"table-wrap\"><table><thead><tr><th>Quantity</th><th>Size and meaning</th></tr></thead><tbody><tr><td>Original tool text</td><td>400,000 characters: approximately 100,000 tokens under the middleware heuristic</td></tr><tr><td>Generic tool-offload threshold</td><td>More than 80,000 characters: 20,000 estimated tokens at the default setting</td></tr><tr><td>Model input capacity</td><td>Assume its profile advertises <code>max_input_tokens=100000</code>; this is a separate limit on the complete request</td></tr></tbody></table></div><p>The heuristic uses four characters per token, not the model tokenizer. Actual token counts vary by content. For comparison, 100,000 characters would be only 25,000 estimated tokens under this heuristic.</p><ol class=\"explain-steps\"><li><strong>The tool returns.</strong> Generic interception runs after the tool handler has produced its result. Extract and join text blocks from the tool message, then compare their character count with the threshold.</li><li><strong>Save the full extracted text.</strong> The 400,000-character result exceeds the threshold, so middleware attempts to write <code>/large_tool_results/call_brief</code>. Composite artifact routing can change the prefix; a backend-reported path takes precedence in the pointer.</li><li><strong>Replace inline text only after a successful write.</strong> The replacement tells the model where the result lives and how to page through it. Normally it shows the first five and last five lines, clipping each preview line to 1,000 characters. At most ten lines need no middle omission marker.</li><li><strong>Build the next model request.</strong> The conversation gets the pointer and preview instead of the full tool text. Prompts, tool schemas, previous messages, and this preview still consume context. The <a href=\"#/chapter/sdk-context?section=sdk-context-overflow\">separate compaction and overflow checks</a> manage the total request.</li><li><strong>Retrieve selected portions.</strong> The model can call <code>read_file</code> on the stored path with a line offset and limit. It may inspect other windows or search for relevant text; the middleware does not automatically read every page.</li></ol><p><strong>Illustrative Python argument data for reading the first 100 lines</strong>—not a standalone tool invocation or execution result:</p><pre><code class=\"language-python\">read_args = {\n    \"file_path\": \"/large_tool_results/call_brief\",\n    \"offset\": 0,\n    \"limit\": 100,\n}</code></pre><h3>What offloading does not guarantee</h3><ul><li><strong>No automatic full-result summary.</strong> Head/tail previewing is mechanical clipping, not an LLM summary. Conversation compaction is a different operation.</li><li><strong>No exhaustive understanding.</strong> A file pointer does not mean the model has inspected every record. For tasks requiring complete coverage, implement explicit batching or programmatic processing instead of relying on voluntary model paging.</li><li><strong>No application-memory cap.</strong> Generic interception happens after the tool returns; it cannot prevent that tool from first allocating or downloading a large response. With the default <code>StateBackend</code>, offloaded text lives in the graph's <code>files</code> channel, not necessarily disk. It can still consume memory and checkpoint storage; <a href=\"#/chapter/storage-lifetimes?section=storage-lifetimes-state\">restart recovery depends on storage configuration</a>.</li></ul><aside class=\"callout\"><p><strong>Failure is not a successful offload:</strong> <code>tool_token_limit_before_evict=None</code> disables generic eviction. A write returning an error or no result retains the original tool message; exceptions are not universally swallowed. The text check does not bound non-text media, and overflow recovery can still end in <code>ContextOverflowError</code>.</p></aside><details><summary>Reference: exclusions, identity preservation, human eviction, and execution capture</summary><ul><li><strong>Generic tool text.</strong> Storage uses <code>/large_tool_results/{sanitized_tool_call_id}</code> or the composite artifacts root. Replacement preserves message identity, call ID, status, artifact, metadata, and non-text blocks. If writing fails, return no replacement and retain the original result—never invent a pointer.</li><li><strong>Exclusions have separate policies.</strong> <code>ls</code>, <code>glob</code>, <code>grep</code>, <code>read_file</code>, <code>edit_file</code>, <code>write_file</code>, and <code>delete</code> bypass generic eviction. Listing/search tools bound their own output; <code>read_file</code> pages and clips reads of existing files; mutation tools normally return small confirmations. Rereading a giant single line is not fixed by offloading another copy of that same read result.</li><li><strong>Human text without another turn.</strong> The human-text default is 50,000 estimated tokens, separate from the tool-text threshold. Only a newly oversized final human message is considered. Tag the original with <code>lc_evicted_to</code> and persist it with the same message ID; already tagged messages get request-time previews rather than another user turn.</li><li><strong>Execution capture at source.</strong> Compatible <code>BaseSandbox</code> implementations can write output straight to the offload file while returning bounded inline output. The capture path must route to the executing sandbox; otherwise use ordinary execution followed by generic eviction, rather than assuming direct capture works everywhere.</li></ul></details>",
+        "sources": [
+          {
+            "path": "libs/deepagents/deepagents/middleware/filesystem.py",
+            "start": 1088,
+            "end": 1093,
+            "label": "Four-character size heuristic"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/_message_eviction.py",
+            "start": 31,
+            "end": 52,
+            "label": "Paging instructions and preview line cap"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/filesystem.py",
+            "start": 3527,
+            "end": 3571,
+            "label": "Text threshold and failed-write behavior"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/filesystem.py",
+            "start": 3850,
+            "end": 3879,
+            "label": "Tool executes before generic eviction"
+          },
+          {
+            "path": "libs/deepagents/deepagents/graph.py",
+            "start": 671,
+            "end": 671,
+            "label": "Default StateBackend"
+          },
+          {
+            "path": "libs/deepagents/deepagents/backends/state.py",
+            "start": 38,
+            "end": 47,
+            "label": "Files live in graph state"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/filesystem.py",
+            "start": 1892,
+            "end": 1904,
+            "label": "Text and binary defaults"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/filesystem.py",
+            "start": 1993,
+            "end": 1997,
+            "label": "Artifact prefixes"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/filesystem.py",
+            "start": 1728,
+            "end": 1757,
+            "label": "Generic eviction exclusions"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/_message_eviction.py",
+            "start": 115,
+            "end": 157,
+            "label": "Head/tail preview algorithm"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/_message_eviction.py",
+            "start": 176,
+            "end": 210,
+            "label": "Preserve media and identity"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/_message_eviction.py",
+            "start": 260,
+            "end": 279,
+            "label": "Write-before-replacement"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/filesystem.py",
+            "start": 3603,
+            "end": 3706,
+            "label": "Human eviction and ID replacement"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/filesystem.py",
+            "start": 3083,
+            "end": 3123,
+            "label": "Capture-at-source routing"
+          }
+        ]
+      },
+      {
+        "id": "sdk-filesystem-media",
+        "title": "Binary blob offload and optional video are separate mechanisms",
+        "body": "<p>Binary blob offload and video sampling solve different problems. <code>offload_binary_content=False</code> by default; enabling it moves base64 content-addressed blobs outside ordinary message history.</p><ol class=\"explain-steps\"><li><strong>Store only valid, successfully uploaded blobs.</strong> Validate base64, hash decoded bytes with SHA-256, upload under the blob prefix, then replace successful payloads with references. Failed uploads retain inline content.</li><li><strong>Hydrate with integrity checks.</strong> On model requests, download missing blobs and verify hashes because the filesystem is agent-writable. Missing, corrupt, or unavailable blobs become explicit text notices, not trusted bytes. A context variable enables on-demand tool hydration and is reset in <code>finally</code>.</li><li><strong>Decode videos through a separate bounded path.</strong> Private <code>_video</code> produces timestamped JPEG frame blocks; PyAV/Pillow are optional and probed lazily. Caps are 64 frames, roughly 4 MiB emitted content, a 4,096-pixel maximum side, and a best-effort 10-second decode deadline. The container closes in <code>finally</code>; output/frame caps add a coverage-truncated notice, while no decodable frames is an error.</li></ol><aside class=\"callout\"><p><strong>Retention and safety limits:</strong> a <code>StateBackend</code> blob route causes a warning and disables offload: checkpointing state files would retain the bytes. Earlier checkpoints may also retain original input writes. Offload is neither retrospective erasure nor a retention guarantee; video caps do not secure every native codec or guarantee hard preemptive timeout.</p></aside>",
+        "sources": [
+          {
+            "path": "libs/deepagents/deepagents/middleware/_blob_offload.py",
+            "start": 46,
+            "end": 75,
+            "label": "Scoped context and content addressing"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/_blob_offload.py",
+            "start": 105,
+            "end": 131,
+            "label": "Best-effort blob upload"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/_blob_offload.py",
+            "start": 194,
+            "end": 228,
+            "label": "Hash-verified hydration"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/filesystem.py",
+            "start": 1938,
+            "end": 1948,
+            "label": "History and state-route caveats"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/filesystem.py",
+            "start": 1998,
+            "end": 2002,
+            "label": "State backend disables blob offload"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/_video.py",
+            "start": 40,
+            "end": 80,
+            "label": "Optional dependencies and safety caps"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/_video.py",
+            "start": 145,
+            "end": 199,
+            "label": "Container lifetime and no-frames error"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/_video.py",
+            "start": 301,
+            "end": 378,
+            "label": "Sampling and coverage notice"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "sdk-delegation",
+    "group": "Harness internals",
+    "title": "Synchronous and compiled subagents",
+    "kicker": "Isolation is a state contract",
+    "summary": "Trace task selection, input filtering, fork semantics, result extraction, and state merge behavior without confusing async Python with background work.",
+    "readingMinutes": 16,
+    "sections": [
+      {
+        "id": "sdk-delegation-specs",
+        "title": "Three subagent forms, but two very different execution models",
+        "body": "<p>There are three specification forms: declarative <code>SubAgent</code>, prebuilt <code>CompiledSubAgent</code>, and remote <code>AsyncSubAgent</code>. A form describes what you provide and who owns construction. The <code>task</code> tool is an invocation mechanism for the first two forms, not a fourth form.</p><div class=\"table-wrap\"><table><thead><tr><th>Specification form</th><th>Construction owner</th><th>How the parent invokes it</th></tr></thead><tbody><tr><td><code>SubAgent</code></td><td>Deep Agents compiles a declarative specification.</td><td>Inline <code>task</code>; parent waits for a report.</td></tr><tr><td><code>CompiledSubAgent</code></td><td>The application supplies a runnable with its own policy.</td><td>The same inline <code>task</code> adapter; parent still waits.</td></tr><tr><td><code>AsyncSubAgent</code></td><td>A deployed graph/server owns execution.</td><td>Separate launch/check/update/cancel tools track remote thread/run IDs.</td></tr></tbody></table></div><h3>What each form must supply</h3><ul><li><strong>Declarative defaults.</strong> A name and description are required; model, tools, middleware, prompt, response format, permissions, skills, and interrupts may be overridden. <code>create_deep_agent</code> fills defaults and builds the child stack before <code>SubAgentMiddleware</code> compiles it with LangChain <code>create_agent</code>. Direct middleware users must supply complete declarative specs, including model and tools.</li><li><strong>Runnable-owned policy.</strong> A compiled runnable must use a <code>messages</code> state key. Middleware adds run naming/metadata, not parent backend, tools, state schema, or HITL policy. Dynamic response-format configuration can recompile a declarative child but is rejected for an opaque compiled runnable; its owner ensures policy and compatibility.</li></ul><p><code>task(description, subagent_type)</code> selects an inline child by name. The synchronous handler calls <code>invoke</code>; its coroutine calls <code>ainvoke</code>. Both wait. Async Python allows concurrent awaiting; it does not convert inline delegation into background work.</p><details><summary>Reference: task selection and argument validation</summary><p>Duplicate names fail tool construction, unknown names return allowed choices, and a missing tool-call ID raises. Unknown argument keys produce field-located validation errors directing instructions into <code>description</code>, rather than silently dropping them.</p></details>",
+        "sources": [
+          {
+            "path": "libs/deepagents/deepagents/middleware/subagents.py",
+            "start": 84,
+            "end": 129,
+            "label": "Declarative spec contract"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/subagents.py",
+            "start": 230,
+            "end": 250,
+            "label": "Compiled state/result requirements"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/subagents.py",
+            "start": 575,
+            "end": 630,
+            "label": "Low-level declarative compilation"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/subagents.py",
+            "start": 455,
+            "end": 490,
+            "label": "Task argument validation"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/subagents.py",
+            "start": 667,
+            "end": 669,
+            "label": "Name/mode validation"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/subagents.py",
+            "start": 710,
+            "end": 741,
+            "label": "Compiled and dynamic schema branches"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/subagents.py",
+            "start": 838,
+            "end": 896,
+            "label": "Blocking invoke and ainvoke paths"
+          }
+        ]
+      },
+      {
+        "id": "sdk-delegation-isolation",
+        "title": "Default isolation hides conversation, not every other state field",
+        "body": "<p>Default isolated delegation gives a specialist a self-contained assignment without the parent's conversation. This is useful when a report writer needs the brief and output contract, not every earlier discussion. Isolation applies to conversation routing, not automatically to all state or storage.</p><h3>Illustrative input-to-child trace</h3><ol class=\"explain-steps\"><li><strong>Named task input.</strong> The parent calls <code>task(subagent_type=\"report-writer\", description=\"Read /notes/brief.txt; write /notes/report.txt; report the output path and unresolved questions.\")</code>, with parent tool-call ID <code>call_report</code>.</li><li><strong>Filtered child input.</strong> Suppose parent state contains <code>messages</code>, <code>todos</code>, an allowed custom <code>project_id=\"P7\"</code>, and a field marked private. The child receives the allowed <code>project_id</code> and one new human message containing that description; parent messages, todos, and the private field are filtered out.</li><li><strong>Final report.</strong> Suppose the child returns messages ending in an assistant text “Report saved at /notes/report.txt,” no structured response, and unchanged <code>project_id</code>. That text is the selected report; the unchanged project ID is not a changed-state write.</li><li><strong>Parent update.</strong> The adapter returns <code>Command(update={\"messages\": [ToolMessage(report, tool_call_id=\"call_report\")]})</code>, plus any other allowed changed fields. Intermediate child read/write messages do not enter parent history. The result-extraction section below explains the exact precedence rules.</li></ol><h3>Independent sharing and inheritance rules</h3><ul><li><strong>Reserved-state filtering.</strong> Exclusions cover messages, todos, structured response, skill metadata, pending pins, skill-tool disclosure bookkeeping, the fork marker, caller rubric, and discovered private fields. “Stateless task” means conversation isolation—not an input dictionary devoid of domain state.</li><li><strong>Backend access.</strong> High-level construction shares the backend instance with declarative children. Artifacts may be accessible across agents, depending on backend and graph state; this alone is not permission isolation. An explicit child permissions list entirely replaces the parent's list.</li><li><strong>Omitted versus empty tools.</strong> Omitted child <code>tools</code> inherits caller additional tools; an explicit empty list inherits none of those extras. The child's filesystem middleware still contributes tools.</li><li><strong>Specialist configuration.</strong> Unlike the default general-purpose inheritance rule, an ordinary declarative child uses its own configured middleware, model-selected harness profile, and spec-provided skills—not arbitrary parent middleware or parent skill metadata. Different models can yield different descriptions, profile middleware, and capabilities despite a shared backend.</li></ul><aside class=\"callout\"><p><strong>Task-writing rule:</strong> make the description self-contained and request the final report explicitly. The parent does not automatically read intermediate child reasoning or tool transcripts. The trace above is illustrative, not an observed model run.</p></aside>",
+        "sources": [
+          {
+            "path": "libs/deepagents/deepagents/middleware/subagents.py",
+            "start": 399,
+            "end": 435,
+            "label": "Reserved state exclusions and reporting prompt"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/subagents.py",
+            "start": 804,
+            "end": 836,
+            "label": "Input preparation"
+          },
+          {
+            "path": "libs/deepagents/deepagents/graph.py",
+            "start": 714,
+            "end": 753,
+            "label": "Child model/profile/permissions/skills selection"
+          },
+          {
+            "path": "libs/deepagents/deepagents/graph.py",
+            "start": 771,
+            "end": 816,
+            "label": "Custom middleware and tool inheritance"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/subagents.py",
+            "start": 747,
+            "end": 787,
+            "label": "Illustrative report extraction and filtered parent update contract"
+          }
+        ]
+      },
+      {
+        "id": "sdk-delegation-forks",
+        "title": "Forks continue the effective history, with an explicit recursion guard",
+        "body": "<p>A fork is useful when the child needs the conversation already assembled by the parent. Instead of receiving only “write the report,” it can continue from the brief discussion and prior tool results. <code>mode=\"fork\"</code> copies the parent's effective history, then appends the delegated assignment; it does not start a live, synchronized view.</p><p>For an illustrative report task, the child sees the current summary and recent brief reads, but not the in-progress parent delegation call. That call has no child-visible answer yet. Forking is experimental context reuse, not a new security principal.</p><ol class=\"explain-steps\"><li><strong>Snapshot effective history.</strong> Remove the trailing assistant tool-call message containing the in-progress delegation, apply any summarization event, then append a human task with a delegated-continuation preamble. This avoids unanswered parent calls and replay of history already compacted by the parent.</li><li><strong>Rebuild declarative context.</strong> A declarative fork inherits private channels needed for dynamic prompts, mirrors parent custom prompt-producing middleware, uses parent skill sources, and receives configured parent memory middleware. Its prompt appends to inherited authored content rather than replacing it. Separate <code>skills</code> are forbidden because they would break that context contract.</li><li><strong>Stop recursive delegation in code.</strong> Declarative forks mirror the real <code>task</code> schema to preserve tool ordering, but mark state as forked. The handler checks this marker and refuses further delegation—an executable recursion guard, not merely model-facing prose.</li></ol><details><summary>Reference: fork forms do not reconstruct identical context</summary><p>Tools may differ, though differing definitions reduce shared provider prompt-cache reuse. A compiled fork gets effective history but not full private-state/prompt reconstruction; its opaque runnable retains its prompt. An async fork copies conversation, not synchronized model/tools. These forms share conversation copying but not identical prompt/state guarantees.</p></details><aside class=\"callout\"><p><strong>Trust boundary:</strong> inherited state and shared storage still need deliberate treatment. “Fork” does not imply separate permissions or security identity.</p></aside>",
+        "sources": [
+          {
+            "path": "libs/deepagents/deepagents/middleware/subagents.py",
+            "start": 319,
+            "end": 329,
+            "label": "Fork validation"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/subagents.py",
+            "start": 365,
+            "end": 396,
+            "label": "Effective history snapshot"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/subagents.py",
+            "start": 688,
+            "end": 708,
+            "label": "Mirrored guarded task tool"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/subagents.py",
+            "start": 813,
+            "end": 844,
+            "label": "Declarative versus compiled inherited state"
+          },
+          {
+            "path": "libs/deepagents/deepagents/graph.py",
+            "start": 725,
+            "end": 756,
+            "label": "Fork skill/memory inheritance"
+          },
+          {
+            "path": "libs/deepagents/deepagents/graph.py",
+            "start": 771,
+            "end": 825,
+            "label": "Fork custom middleware and prompt"
+          }
+        ]
+      },
+      {
+        "id": "sdk-delegation-results",
+        "title": "The child returns one report plus allowed changed state",
+        "body": "<p>The inline adapter returns one parent-facing report plus allowed changed state—not the child's full transcript.</p><ol class=\"explain-steps\"><li><strong>Compute the state delta.</strong> Require a <code>messages</code> key, remove reserved/private keys, then drop fields equal to their input values. Unchanged writes could cause parallel conflicts without reducers or duplicate inherited data with additive reducers. Changed custom fields still need caller-designed reducers.</li><li><strong>Extract the report.</strong> Prefer non-<code>None</code> <code>structured_response</code>: Pydantic uses <code>model_dump_json</code>, dataclasses use <code>asdict</code> plus JSON, and other supported objects use <code>json.dumps</code>. Otherwise scan backward for the last <code>AIMessage</code> with nonempty text and strip trailing whitespace, skipping empty provider end-turn messages. No suitable text yields an empty string.</li><li><strong>Answer the parent tool call.</strong> Return <code>Command(update={...allowed_changes, \"messages\": [ToolMessage(report, tool_call_id=parent_id)]})</code>. Intermediate child messages do not enter parent history. Files and changed custom state remain separate channels; a child should name useful artifact paths in its report.</li><li><strong>Retain tracing ownership.</strong> Parent callbacks, tags, and configuration propagate through ambient LangGraph configuration. The adapter stamps a subagent marker without duplicating tags, preserves tracing context, and marks <code>ls_agent_type=\"subagent\"</code>.</li></ol><aside class=\"callout\"><p><strong>Cancellation boundary:</strong> this adapter has no synchronous-task cancellation tool or hidden remote task record. Coroutine/graph cancellation belongs to the surrounding framework.</p></aside>",
+        "sources": [
+          {
+            "path": "libs/deepagents/deepagents/middleware/subagents.py",
+            "start": 438,
+            "end": 448,
+            "label": "Unchanged field filtering"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/subagents.py",
+            "start": 747,
+            "end": 787,
+            "label": "Result extraction and Command"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/subagents.py",
+            "start": 551,
+            "end": 572,
+            "label": "Trace context preservation"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/subagents.py",
+            "start": 856,
+            "end": 896,
+            "label": "Ambient config and invocation boundary"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "sdk-background",
+    "group": "Harness internals",
+    "title": "Background subagents and notifications",
+    "kicker": "Remote lifecycle, not just another coroutine",
+    "summary": "Follow launch, status reconciliation, queued follow-ups, cancellation and parent wake-up through the Agent Protocol boundary.",
+    "readingMinutes": 18,
+    "sections": [
+      {
+        "id": "sdk-background-launch",
+        "title": "Launch creates a remote thread and run",
+        "body": "<p>Use background delegation when the parent should continue while a child does longer work. For example, a remote writer can prepare <code>/notes/report.txt</code> while the parent handles another question. Unlike inline <code>task</code>, launch returns an identity to track instead of waiting for the final report.</p><p>A <strong>thread</strong> is the remote conversation/state container. A <strong>run</strong> is one execution on that thread. The SDK uses the child's thread ID as <code>task_id</code>; a follow-up creates another run on that same task. Keep both IDs in logs and UI state.</p><p>An <code>AsyncSubAgent</code> references a deployed graph/assistant through <code>graph_id</code>. Optional URL, headers, webhook, update strategy, notification preference, and context mode configure graph/server access—not a local declarative tool stack.</p><ol class=\"explain-steps\"><li><strong>Choose a reachable transport.</strong> No URL uses LangGraph SDK local ASGI transport and requires an async parent entry point. Synchronous invocation needs a server URL. Clients are cached by URL and resolved headers.</li><li><strong>Create the remote work.</strong> Validate the agent name; prepare an isolated description or forked conversation; create a thread with parent/subagent metadata; then create its run. Record thread ID as <code>task_id</code>, together with agent name, run ID, status, and timestamps.</li><li><strong>Return without waiting.</strong> The start tool returns a tool result and <code>async_tasks</code> state update after remote creation. Its reducer dictionary-merges by task ID, so independent launches do not replace the task collection. The successful-create record initially says <code>running</code>; later observation reconciles server truth.</li></ol><details><summary>Reference: cross-deployment context and wake-up authority</summary><p>Same-deployment launches can forward run context and trace linkage. A remote-URL spec gets no parent context, and its parent reference omits the assistant ID used for wake-up. This avoids granting another deployment authority to launch notification runs against the local parent assistant. Custom headers and webhook URLs cross a network trust boundary.</p></details><aside class=\"callout\"><p><strong>Identity and truth:</strong> a task ID is not one immutable run ID, and the initial local status is not permanently authoritative. Remote graphs own their backend configuration; matching file paths do not themselves establish shared storage.</p></aside>",
+        "sources": [
+          {
+            "path": "libs/deepagents/deepagents/middleware/async_subagents.py",
+            "start": 70,
+            "end": 171,
+            "label": "Async spec fields and transport limitations"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/async_subagents.py",
+            "start": 249,
+            "end": 262,
+            "label": "Task dictionary reducer"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/async_subagents.py",
+            "start": 374,
+            "end": 439,
+            "label": "Parent/context forwarding"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/async_subagents.py",
+            "start": 692,
+            "end": 728,
+            "label": "Client cache"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/async_subagents.py",
+            "start": 798,
+            "end": 838,
+            "label": "Launch and tracked task state"
+          }
+        ]
+      },
+      {
+        "id": "sdk-background-status",
+        "title": "Status requires both run and thread, especially for HITL",
+        "body": "<p>Resolve task status from both run and thread. Run status alone cannot distinguish a child waiting for human input from completed or cancelled work.</p><div class=\"table-wrap\"><table><thead><tr><th>Observed server state</th><th>Task interpretation</th></tr></thead><tbody><tr><td>Run <code>success</code>, thread <code>interrupted</code> after <code>interrupt()</code></td><td><code>waiting</code>, not a completed report.</td></tr><tr><td>Run <code>interrupted</code> because cancelled/replaced</td><td><code>cancelled</code>.</td></tr><tr><td>Successful run, thread now busy or error</td><td>Observation can follow a newer run.</td></tr><tr><td>Another client replaced an interrupted run</td><td>Can follow the latest run unless the parent explicitly cancelled the task.</td></tr></tbody></table></div><ol class=\"explain-steps\"><li><strong>Check the identified task.</strong> <code>check_async_task</code> fetches the relevant run/thread and returns status plus thread ID. Success includes final standard content blocks; failure includes error information; waiting includes interrupt IDs/values. Explicit cancellation of a paused task remains cancelled rather than being relabelled waiting on the next check.</li><li><strong>Interpret lists as scoped refreshes.</strong> <code>list_async_tasks</code> first filters tracked records by stored status, then fetches live values only for that subset and stores refreshed results. Fetch failures warn and retain cached status. This is not a full server-side status query across all remote threads.</li><li><strong>Keep waiting observable.</strong> Terminal states skip ordinary live-status fetches in the list path, but waiting is nonterminal: a human response on the child thread can produce a new run and outcome. Troubleshoot using thread/run IDs, not an old tool message.</li></ol><aside class=\"callout\"><p><strong>Approval belongs to the child thread:</strong> waiting explicitly requests a user response there. Parent-generated instructions are not human approval; a failed live fetch can leave a knowingly stale view.</p></aside>",
+        "sources": [
+          {
+            "path": "libs/deepagents/deepagents/middleware/async_subagents.py",
+            "start": 174,
+            "end": 188,
+            "label": "Waiting and terminal semantics"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/async_subagents.py",
+            "start": 892,
+            "end": 974,
+            "label": "Run/thread reconciliation and check result"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/async_subagents.py",
+            "start": 1022,
+            "end": 1026,
+            "label": "Keep paused task cancelled"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/async_subagents.py",
+            "start": 1346,
+            "end": 1456,
+            "label": "Filtered list and cached fallback"
+          }
+        ]
+      },
+      {
+        "id": "sdk-background-update",
+        "title": "Follow-ups: interrupt by default, enqueue when requested",
+        "body": "<p><code>update_async_task</code> adds a user message and starts a new run on an existing thread. It does not edit an executing model request. This is why the task/thread ID stays fixed while the tracked run ID changes.</p><h3>Illustrative queued follow-up timeline</h3><ol class=\"explain-steps\"><li><strong>Launch T/R1.</strong> A child starts the report on thread <code>T</code>, run <code>R1</code>. Parent state records <code>task_id=T</code>, <code>run_id=R1</code>, initially <code>running</code>.</li><li><strong>Queue T/R2.</strong> With explicitly configured <code>update_strategy=\"enqueue\"</code>, “Also include open questions” creates <code>R2</code> on <code>T</code>. The tracked run becomes <code>R2</code>, which may be <code>pending</code>; <code>R1</code> enters <code>superseded_run_ids</code>.</li><li><strong>Observe R1's notification.</strong> Earlier result content remains available, but its notification is labelled as belonging to an earlier run. It must not mark the latest follow-up complete.</li><li><strong>Observe R2's outcome.</strong> A current-run notification or live status check reconciles the task. If the parent is busy it can pull; an eligible idle parent can be woken. Delivery is best effort, so the notification is not a substitute for checking remote state.</li></ol><h3>Update and cancellation contracts</h3><ul><li><strong>Default replacement versus queueing.</strong> Default <code>update_strategy=\"interrupt\"</code> stops/replaces current work through the server multitask strategy. <code>enqueue</code> waits behind active work, as in the hypothetical timeline above.</li><li><strong>Concurrent queued updates.</strong> Multiple same-task queued updates in one assistant response are guarded: concurrent calls see the same initial state and could otherwise overwrite each other's run bookkeeping. Earlier notifications retain prior result content but suggest checking current status.</li><li><strong>Updates are not approval.</strong> Starting a follow-up on a child waiting for human input can drop that waiting request; confirmation text warns about it. This changes the workflow rather than answering the pending human approval.</li><li><strong>Queue-safe cancellation.</strong> Call the server cancel endpoint for the latest run, then try active superseded runs newest first, so cancelling active work does not release a queued successor. Earlier-run read/cancel failures are logged and skipped. Waiting tasks have no active run, so cancellation marks local state rather than pretending to cancel execution.</li></ul><aside class=\"callout\"><p><strong>No rollback guarantee:</strong> remote-run cancellation does not prove that external side effects already initiated by tools were undone. T/R1/R2 are illustrative labels, not observed server IDs.</p></aside>",
+        "sources": [
+          {
+            "path": "libs/deepagents/deepagents/middleware/async_subagents.py",
+            "start": 130,
+            "end": 147,
+            "label": "Default update and wake-up options"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/async_subagents.py",
+            "start": 1093,
+            "end": 1151,
+            "label": "Queued-update guard and superseded records"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/async_subagents.py",
+            "start": 1154,
+            "end": 1191,
+            "label": "Follow-up server request"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/async_subagents.py",
+            "start": 1243,
+            "end": 1342,
+            "label": "Cancellation order and waiting behavior"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/async_subagents.py",
+            "start": 1709,
+            "end": 1729,
+            "label": "Superseded notification handling"
+          }
+        ]
+      },
+      {
+        "id": "sdk-background-notifications",
+        "title": "Busy-parent reconciliation and idle-parent wake-up",
+        "body": "<p>Busy-parent reconciliation and idle-parent wake-up complement each other. Neither is a durable exactly-once queue.</p><ol class=\"explain-steps\"><li><strong>Pull while the async parent runs.</strong> <code>AsyncSubAgentMiddleware</code> checks unfinished tasks at startup and before model calls, then once more after a final answer. A newly observed notification can jump back to the model; running tasks alone do not trigger a blind loop. Checks are concurrent with per-task timeouts; failures log and retry at a later lifecycle opportunity. Synchronous hooks intentionally do not pull automatically.</li><li><strong>Report from the linked child.</strong> Private parent-notifier middleware sends final content or model-call errors for appropriately linked top-level async runs. It skips nested graph namespaces, deduplicates run IDs in bounded memory, and rethrows graph interrupts instead of labelling them failures. Its model-call wrapper does not comprehensively report every tool/runtime failure.</li><li><strong>Wake only an eligible parent.</strong> For parent-thread <code>idle</code> or <code>error</code>, the helper starts a notification run with <code>multitask_strategy=\"reject\"</code>. It avoids human-approval waits, where a new run might cancel review. Busy parents use pulling instead. Delivery errors are logged, not raised: coordination is best effort.</li><li><strong>Label and bound the notification.</strong> Notifications are human messages with standard <code>async_subagent</code> source metadata and an explicit “not user answers” label. Child text is HTML-escaped inside the tagged envelope; only suitable text/media blocks pass through, and long text is clipped. <code>check_async_task</code> retrieves fuller details.</li></ol><aside class=\"callout\"><p><strong>Content remains untrusted:</strong> escaping reduces structural spoofing; it does not promote child-controlled output into trusted instructions.</p></aside>",
+        "sources": [
+          {
+            "path": "libs/deepagents/deepagents/middleware/async_subagents.py",
+            "start": 1633,
+            "end": 1707,
+            "label": "Async lifecycle reconciliation"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/_parent_notifier.py",
+            "start": 30,
+            "end": 95,
+            "label": "Child report scope and bounded deduplication"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/async_subagents.py",
+            "start": 653,
+            "end": 689,
+            "label": "Idle wake-up and reject strategy"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/async_subagents.py",
+            "start": 467,
+            "end": 615,
+            "label": "Notification labels, escaping and clipping"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "sdk-knowledge",
+    "group": "Harness internals",
+    "title": "Memory, skills and progressive disclosure",
+    "kicker": "Instructions are loaded on different schedules",
+    "summary": "Separate full memory injection, skill metadata indexing, body reads, pinned snapshots, and executable skill-tool disclosure.",
+    "readingMinutes": 17,
+    "sections": [
+      {
+        "id": "sdk-knowledge-memory",
+        "title": "Memory is explicit source content cached in state",
+        "body": "<p>Memory supplies standing instructions from explicit files. For example, an application can configure a readable source saying that every report must list unresolved questions. <code>memory=[...]</code> installs backend-backed <code>MemoryMiddleware</code>; it does not automatically scan every ancestor directory for every possible <code>AGENTS.md</code>.</p><ol class=\"explain-steps\"><li><strong>Load once into state.</strong> Startup downloads all sources in one backend call and stores path-to-text <code>memory_contents</code>. Missing files are skipped; other download errors raise <code>ValueError</code>; bytes decode as UTF-8. If the field already exists—even with no loaded files—the load is skipped.</li><li><strong>Build the request fragment.</strong> Read current state, format sources in configured order, strip HTML comments/trailing whitespace, and append to the system message. A custom template must contain <code>{agent_memory}</code>.</li><li><strong>Apply model-specific cache control.</strong> High-level construction enables <code>add_cache_control=True</code>. Each request checks the actual model and puts an ephemeral breakpoint on the final system block only for <code>ChatAnthropic</code>, not automatically for Bedrock/Vertex wrappers. Routing can change this behavior without rebuilding the graph.</li></ol><aside class=\"callout\"><p><strong>Two different <code>system_prompt</code> parameters:</strong> <code>MemoryMiddleware(system_prompt=None)</code> suppresses only that middleware's memory fragment while still loading contents. <code>create_deep_agent(system_prompt=None)</code> merely omits the caller-authored main prompt; it does <em>not</em> disable installed memory injection.</p></aside><p>In the illustrative report example, the loaded instruction can appear on successive model requests without a new user message. Editing its source file does not guarantee a next-call refresh in an active thread: an existing <code>memory_contents</code> field is reused.</p><p>This is deterministic loading/prompt inclusion, not semantic search, a vector store, or automatic factual learning. Filesystem edits, persistent storage, and checkpoint state have distinct lifecycles.</p>",
+        "sources": [
+          {
+            "path": "libs/deepagents/deepagents/graph.py",
+            "start": 955,
+            "end": 964,
+            "label": "High-level memory installation"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/memory.py",
+            "start": 192,
+            "end": 242,
+            "label": "Template and caching configuration"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/memory.py",
+            "start": 244,
+            "end": 344,
+            "label": "Memory formatting, source loading and cached state"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/memory.py",
+            "start": 346,
+            "end": 382,
+            "label": "Active-model cache breakpoint"
+          },
+          {
+            "path": "libs/deepagents/deepagents/graph.py",
+            "start": 671,
+            "end": 691,
+            "label": "Main system_prompt omission does not disable memory fragments"
+          }
+        ]
+      },
+      {
+        "id": "sdk-knowledge-discovery",
+        "title": "Skill discovery exposes metadata before instructions",
+        "body": "<p>Skills use progressive disclosure: load a small catalog first, then pay instruction-body and tool-schema costs when relevant. The catalog reflects successfully loaded skills, not an optimistically advertised directory.</p><ol class=\"explain-steps\"><li><strong>Discover immediate child skills.</strong> List each backend source directory, gather child directories, batch-download their <code>SKILL.md</code> files, and parse YAML frontmatter. Catalog entries contain name, description, path, and optional metadata/license/compatibility/allowed-tool fields; full bodies are not eagerly appended. The model can select a file with <code>read_file</code>.</li><li><strong>Apply precedence and cache semantics.</strong> Later sources replace same-name earlier entries. Load only when <code>skills_metadata</code> is missing or <code>None</code>; an empty list means already loaded with no skills. Setting <code>None</code> requests reload on the next agent run. Source errors are recorded, logged, and by default surfaced as bounded warnings.</li><li><strong>Distinguish parser rejection from warnings.</strong> Frontmatter must start the file; <code>yaml.safe_load</code> must produce a mapping with nonempty name/description. Malformed or oversized content is skipped. Name-format violations warn but continue for compatibility; long description/compatibility values are truncated with warnings. A metadata warning does not always mean rejection.</li><li><strong>Choose the interface level.</strong> <code>SkillsMiddleware</code> accepts labelled source tuples and custom templates; the top-level constructor accepts a simpler path list. Same-name custom middleware can replace the skills slot, and its sources are recognized for the default general-purpose child.</li></ol><aside class=\"callout\"><p><strong>Missing is not empty:</strong> bounded source warnings prevent a failed discovery source from silently masquerading as a confidently empty catalog.</p></aside>",
+        "sources": [
+          {
+            "path": "libs/deepagents/deepagents/middleware/skills.py",
+            "start": 462,
+            "end": 560,
+            "label": "Frontmatter parsing and warning/rejection behavior"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/skills.py",
+            "start": 687,
+            "end": 744,
+            "label": "Backend discovery and batch download"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/skills.py",
+            "start": 1026,
+            "end": 1084,
+            "label": "Sources, labels and templates"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/skills.py",
+            "start": 1166,
+            "end": 1210,
+            "label": "Load caching, override order and errors"
+          },
+          {
+            "path": "libs/deepagents/deepagents/graph.py",
+            "start": 693,
+            "end": 697,
+            "label": "Custom skills source adoption"
+          }
+        ]
+      },
+      {
+        "id": "sdk-knowledge-pins",
+        "title": "Pinned skills are conversation snapshots, not live includes",
+        "body": "<p><code>pinned_skills</code> queues exact catalog names. A pin captures a conversation snapshot; it is not a live include of the source file.</p><ol class=\"explain-steps\"><li><strong>Queue and resolve names.</strong> The reducer appends writes, so multiple tools in one graph step can request pins. Before a model call, resolve distinct names in first-seen order and download their bodies.</li><li><strong>Append usable snapshots.</strong> Add one human message per usable skill with frontmatter removed. Skip unknown/unreadable skills and clear the consumed queue. Naming the same skill again later appends another snapshot.</li><li><strong>Respect snapshot lifetime.</strong> Memory is rebuilt into system content from <code>memory_contents</code> each request; pinned bodies are message content captured at one point, not retroactively refreshed by file edits. Summarization can age a pin out of effective history. A successful pin does not promise its full text in every future call.</li></ol><p><strong>Illustrative invocation state, not executed here:</strong></p><pre><code class=\"language-python\">result = agent.invoke({\n    \"messages\": [{\"role\": \"user\", \"content\": \"Audit this change.\"}],\n    \"pinned_skills\": [\"code-review\"],\n})</code></pre><aside class=\"callout\"><p><strong>Prerequisites:</strong> skills middleware must be installed, the name discovered, and its file readable; a name alone registers nothing. Skill-selection UIs should expose unknown/unreadable outcomes rather than promise a pin merely because an input list was accepted.</p></aside>",
+        "sources": [
+          {
+            "path": "libs/deepagents/deepagents/middleware/skills.py",
+            "start": 348,
+            "end": 388,
+            "label": "Pin reducer and snapshot contract"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/skills.py",
+            "start": 819,
+            "end": 845,
+            "label": "Distinct name resolution and readable-body checks"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/skills.py",
+            "start": 1258,
+            "end": 1300,
+            "label": "Pin lifecycle hooks"
+          }
+        ]
+      },
+      {
+        "id": "sdk-knowledge-tool-disclosure",
+        "title": "Reading a skill can disclose tools, with a tool-time gate",
+        "body": "<p>A skill catalog advertises what can be learned; it does not immediately grant every associated tool. <code>metadata.include_tools</code> names executable tool groups that the application resolves. Concrete tools or an include-name resolver can provide them, but they stay off <code>self.tools</code> so the tool node does not register them before a skill read.</p><h3>Illustrative disclosure lifecycle</h3><ol class=\"explain-steps\"><li><strong>Catalog.</strong> A discovered <code>reporting</code> skill advertises its description and <code>SKILL.md</code> path. Suppose its <code>include_tools</code> metadata names an application-provided group resolving to <code>publish_report</code>. The catalog alone is not a read anchor.</li><li><strong>Skill read.</strong> A successful <code>read_file</code> of that known skill path, or a labelled pinned-skill message, anchors disclosure in effective history. Any offset/limit counts: this checks call identity and success, not proof that every instruction byte was read.</li><li><strong>Eligible schema.</strong> On the next model request, eligible resolved tools are disclosed and the response records the gated <code>tool name → include name</code> mapping. Eligibility is not execution.</li><li><strong>Tool-time gate.</strong> A call to an unregistered <code>publish_report</code> can be attached dynamically only when the latest disclosure record authorizes its name. The resolver runs again; if it no longer returns that tool, normal invalid-tool handling remains.</li><li><strong>Loss of read anchor.</strong> If compaction removes the skill read from effective history, a later request can omit the gated tool and write an empty disclosure record. A stale call then lacks this dynamic gate. Already registered tools are a separate case.</li></ol><p>The names above are hypothetical application configuration, not shipped publishing tools or observed model output.</p><details><summary>Reference: precedence and provider-specific disclosure</summary><p>Existing request tools win by name; deferred present tools may disclose early; new resolver tools become gated additions anchored at the earliest relevant read. Models supporting provider-specific mid-conversation tools receive message insertions; others receive request-list definitions.</p><p>Rejected Anthropic root schema combinators are withheld with warnings so recorded permissions match displayed schemas. Every model response stores the private disclosure record, even when empty. This executable gate does not merely ask the model to politely avoid hidden tools.</p></details><aside class=\"callout\"><p><strong>Not a sandbox:</strong> parsed <code>allowed-tools</code> metadata is separate. Resolver code, already registered tools, and backend isolation still define application trust boundaries. A successful partial read does not certify instruction compliance.</p></aside>",
+        "sources": [
+          {
+            "path": "libs/deepagents/deepagents/middleware/skills.py",
+            "start": 1050,
+            "end": 1084,
+            "label": "Tools kept off static registration"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/_skill_tools.py",
+            "start": 194,
+            "end": 244,
+            "label": "Disclosure plan and name precedence"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/_skill_tools.py",
+            "start": 265,
+            "end": 300,
+            "label": "Successful-read matching"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/_skill_tools.py",
+            "start": 355,
+            "end": 388,
+            "label": "Provider schema compatibility and inline capability"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/skills.py",
+            "start": 1302,
+            "end": 1411,
+            "label": "Latest disclosure record and execution gate"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "sdk-context",
+    "group": "Harness internals",
+    "title": "Context compaction and transcript repair",
+    "kicker": "Keep the request small without lying about history",
+    "summary": "Trace model-aware thresholds, summary events, history offload, bounded overflow recovery, unsupported media, and dangling tool-call patches.",
+    "readingMinutes": 19,
+    "sections": [
+      {
+        "id": "sdk-context-events",
+        "title": "Summarization stores an event rather than deleting raw messages",
+        "body": "<p>Compaction replaces the model's view of older conversation with a summary while keeping a recent tail. This lets work continue without resending every earlier tool result. The SDK stores a private summarization event; it does not simply delete those raw messages.</p><h3>Illustrative before and after</h3><p>Suppose raw history is <code>[m0: request, m1: brief read, m2: discussion, m3: report draft, m4: latest instruction]</code>. If the selected cutoff is 3, the next effective history is <code>[S: summary of m0–m2, m3, m4]</code>. Raw history still contains <code>m0</code> through <code>m4</code>; the event supplies <code>S</code> and the cutoff.</p><p>This tiny example teaches the transformation, not a claim that five messages trigger default compaction. Trigger thresholds, preserved-tail size, and cutoff selection determine when the real operation is useful. An archive pointer appears only when archival succeeds.</p><ol class=\"explain-steps\"><li><strong>Project and measure the request.</strong> Apply the prior summary event to produce effective history, count the complete current request, optionally shorten old tool arguments, and test the summarization trigger. LangChain's helper owns cutoff selection and model/callable summary generation.</li><li><strong>Archive before automatic summary generation.</strong> Split effective history into older messages and a preserved tail. Offload older inline media so archives and summaries can use file references instead of large data URLs. Choose a private per-invocation session ID and write history before generating the automatic summary.</li><li><strong>Persist the event.</strong> Store the absolute state cutoff, a human summary message, optional history path, and state-message count at creation. Future requests use summary plus raw tail.</li><li><strong>Adjust prefix-dependent reasoning.</strong> Remove Claude reasoning tied to the old prefix from affected preserved messages when the prefix changes. Fresh reasoning after event creation remains. The raw channel is not simply cleared; selected overflow replacements instead persist by message ID.</li></ol><details><summary>Reference: translating a second cutoff into raw-state coordinates</summary><p>The effective list includes a synthetic summary slot, which is not a raw-state message. A second compaction therefore computes <code>absolute_cutoff = prior_cutoff + effective_cutoff - 1</code>. With prior cutoff 3 and a new effective cutoff of 2, the new absolute cutoff is 4: the new summary replaces old summary <code>S</code> plus <code>m3</code>, preserving raw tail from <code>m4</code>.</p><p>This conversion avoids replaying or double-counting old history. The automatic wrapper adds archival, media references, bookkeeping, and overflow recovery around LangChain's cutoff/summary helper.</p></details><aside class=\"callout\"><p><strong>Recovery is conditional:</strong> archival failure warns but does not stop summarization; <code>file_path=None</code> means older model-visible content has no recovery archive pointer. Partial media failures get explicit failed placeholders, not fictitious preservation. Measure checkpoint size, prompt size, and archive recoverability separately.</p></aside>",
+        "sources": [
+          {
+            "path": "libs/deepagents/deepagents/middleware/summarization.py",
+            "start": 158,
+            "end": 178,
+            "label": "Summary event fields"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/summarization.py",
+            "start": 224,
+            "end": 237,
+            "label": "Private event and session state"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/summarization.py",
+            "start": 727,
+            "end": 737,
+            "label": "LangChain helper boundary"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/summarization.py",
+            "start": 919,
+            "end": 989,
+            "label": "Effective history and absolute cutoff arithmetic"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/summarization.py",
+            "start": 1626,
+            "end": 1727,
+            "label": "Automatic compaction state transition"
+          }
+        ]
+      },
+      {
+        "id": "sdk-context-defaults",
+        "title": "The constructor uses a factory, not the raw class defaults",
+        "body": "<p><code>create_deep_agent</code> calls <code>create_summarization_middleware(model, backend)</code>. This factory requires a resolved <code>BaseChatModel</code>, computes defaults, and constructs the public <code>SummarizationMiddleware</code> alias. Direct class construction instead uses LangChain constants for <code>keep</code> and trim defaults.</p><div class=\"table-wrap\"><table><thead><tr><th>Model metadata</th><th>Summarize trigger</th><th>Keep</th><th>Argument truncation trigger / keep</th></tr></thead><tbody><tr><td>Dictionary profile with integer <code>max_input_tokens</code></td><td><code>(\"fraction\", 0.85)</code></td><td><code>(\"fraction\", 0.10)</code></td><td>85% / 10% of that input capacity</td></tr><tr><td>No qualifying capacity metadata</td><td><code>(\"tokens\", 170000)</code></td><td><code>(\"messages\", 6)</code></td><td>20 messages / retain latest 20 messages</td></tr></tbody></table></div><ol class=\"explain-steps\"><li><strong>Interpret fallback as configuration, not capacity.</strong> Tests assert both table branches. The unknown-capacity fallback does not guarantee a model accepts 170,000 tokens. Small custom models need accurate profiles or replacement summarization middleware with suitable thresholds.</li><li><strong>Shorten old string arguments only.</strong> Outside the keep window, strings above the default 2,000-character threshold become their first 20 characters plus <code>...(argument truncated)</code>. This changes request history, not the already executed call, and does not replay shortened arguments.</li><li><strong>Count the complete request where supported.</strong> Include system content and tool schemas when the counter accepts <code>tools=</code>. Counters lacking that keyword are handled; an internal <code>TypeError</code> from an introspectable counter is not swallowed as a harmless signature mismatch.</li></ol>",
+        "sources": [
+          {
+            "path": "libs/deepagents/deepagents/middleware/summarization.py",
+            "start": 288,
+            "end": 325,
+            "label": "Exact factory threshold selection"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/summarization.py",
+            "start": 755,
+            "end": 765,
+            "label": "Argument shortening defaults"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/summarization.py",
+            "start": 1070,
+            "end": 1136,
+            "label": "String clipping and full-request counting"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/summarization.py",
+            "start": 1949,
+            "end": 1966,
+            "label": "Resolved-model factory"
+          },
+          {
+            "path": "libs/deepagents/tests/unit_tests/middleware/test_summarization_factory.py",
+            "start": 25,
+            "end": 44,
+            "label": "Assertions for both threshold branches"
+          }
+        ]
+      },
+      {
+        "id": "sdk-context-overflow",
+        "title": "Context-overflow recovery is bounded and reduction-aware",
+        "body": "<p>Provider overhead or inaccurate estimates can defeat thresholds. Context-overflow recovery handles recognized overflow failures after an attempted request; it does not retry arbitrary provider errors.</p><ol class=\"explain-steps\"><li><strong>Compute the full-request budget.</strong> Use the active model's advertised <code>max_input_tokens</code>, reserve 5% headroom, and subtract the maximum configured output budget found under supported token-setting names. Messages, system content, and tools all contribute.</li><li><strong>Compact and inspect the trailing results.</strong> Even after summarization, consecutive trailing tool results may dominate. <code>_overflow_clip</code> finds that batch and offloads large results. A <code>read_file</code> result keeps about 4,000 leading text characters and points to its existing file; it does not write another copy.</li><li><strong>Persist only successful replacements.</strong> Other tool messages use generic write-before-replacement eviction. Successful replacements retain message IDs and persist; failed writes keep originals. A pointer without a successful archive write is not recovery.</li><li><strong>Retry only a genuinely smaller request.</strong> Before recovery input is sent, verify reduction and any known budget. The documented path allows at most one smaller recovery retry, including after initial summarization. Exhaustion or irreducible input raises <code>ContextOverflowError</code> with guidance to reduce input, tools, or output allocation—not a loop of identical expensive rejections.</li></ol><h3>Worked budget: why a 100K window is not 100K free input</h3><p>Continue the <a href=\"#/chapter/sdk-filesystem?section=sdk-filesystem-text-offload\">100K-token tool-result example</a>. Assume a model profile with the capacity below and an explicitly configured output allowance. These are illustrative settings, not universal provider limits.</p><div class=\"table-wrap\"><table><thead><tr><th>Setting or calculation</th><th>Illustrative token budget</th></tr></thead><tbody><tr><td>Advertised <code>max_input_tokens</code></td><td>100,000</td></tr><tr><td>Default automatic summarization trigger, 85%</td><td>85,000</td></tr><tr><td>Configured output allowance</td><td>12,000</td></tr><tr><td>Usable input: <code>100000 * 0.95 - 12000</code></td><td>83,000, shared by messages, system content, and tool schemas</td></tr></tbody></table></div><p>The full-request budget check can therefore cause compaction before the nominal 85% trigger. Offloading the huge tool result removes its full text from inline context, but does not prove that the remaining request fits. Without qualifying model-capacity metadata, the factory's 170,000-token fallback is configuration—not evidence that a 100K model accepts that much input.</p><aside class=\"callout\"><p><strong>Diagnosis order:</strong> check capacity metadata, then system/memory/skill size, total tool-schema size, the latest result batch, and archival failures. Summarizing prose cannot fix an irreducible system prompt or bound tool definitions already exceeding capacity.</p></aside>",
+        "sources": [
+          {
+            "path": "libs/deepagents/deepagents/middleware/summarization.py",
+            "start": 526,
+            "end": 547,
+            "label": "Recognized context error classifier"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/summarization.py",
+            "start": 1493,
+            "end": 1557,
+            "label": "Budget and bounded smaller retry"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/summarization.py",
+            "start": 1595,
+            "end": 1624,
+            "label": "Recovery contract"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/_overflow_clip.py",
+            "start": 53,
+            "end": 115,
+            "label": "Tail selection and read-file special case"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/_overflow_clip.py",
+            "start": 131,
+            "end": 173,
+            "label": "Replacement state behavior"
+          }
+        ]
+      },
+      {
+        "id": "sdk-context-manual",
+        "title": "Manual compact_conversation is optional, gated composition",
+        "body": "<p><code>SummarizationToolMiddleware</code> optionally composes a summarization instance with <code>compact_conversation</code>. The middleware package exports its factory; the constructor does not automatically add this tool. Applications can choose automatic compaction alone or allow explicit model requests too.</p><p>Manual compaction is eligible before automatic compaction would normally trigger. For an illustrative custom automatic trigger of <code>(\"messages\", 20)</code>, manual eligibility begins at 10 effective messages. Eligibility permits the attempt; it does not guarantee a nonempty older prefix to summarize or cause background compaction by itself.</p><ol class=\"explain-steps\"><li><strong>Check eligibility.</strong> Use roughly half the automatic token threshold, message threshold, or context fraction. Reported usage metadata is used when available.</li><li><strong>Compact effective history.</strong> Reconstruct it with the shared event helper, select a cutoff, and return “nothing to compact” when ineligible or when no eligible history exists. Summary/archive work happens inside a guarded tool operation; ordinary exceptions become error tool messages.</li><li><strong>Keep summarizer choice separate from capacity.</strong> A custom summarizer can be callable or a model under the underlying helper contract. Repository tests show an alternate model generating summaries while trigger capacity still comes from the main model, so choosing a cheaper summary model does not accidentally change when compaction happens.</li></ol><details><summary>Reference: combined conditions and exact half-trigger rounding</summary><p>Dictionary conditions use AND within a clause and OR between alternate clauses. Thus a clause with token and message thresholds requires both corresponding half-thresholds; meeting only one does not qualify. A different alternative clause can independently qualify. No trigger conditions means ineligible.</p><p>Each half-trigger threshold is <code>max(1, int(value * 0.5))</code>; fraction conditions first use the model's input capacity. A fraction clause cannot qualify without that capacity, and an unknown condition kind fails its clause. The 20-message example above is custom configuration, not the factory default.</p></details><aside class=\"callout\"><p><strong>Ordering caveat:</strong> manual tooling has its own control-flow order. Do not assume its archive/summary sequence is byte-for-byte identical to the automatic wrapper's archive-before-summary path.</p></aside>",
+        "sources": [
+          {
+            "path": "libs/deepagents/deepagents/middleware/__init__.py",
+            "start": 76,
+            "end": 81,
+            "label": "Manual compaction exports"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/summarization.py",
+            "start": 2059,
+            "end": 2104,
+            "label": "Optional tool composition"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/summarization.py",
+            "start": 2292,
+            "end": 2344,
+            "label": "Eligibility and tool execution"
+          },
+          {
+            "path": "libs/deepagents/tests/unit_tests/middleware/test_summarization_factory.py",
+            "start": 98,
+            "end": 141,
+            "label": "Callable/model summarizer and main-model thresholds"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/summarization.py",
+            "start": 2260,
+            "end": 2290,
+            "label": "Half-trigger rounding and AND conditions within clauses"
+          }
+        ]
+      },
+      {
+        "id": "sdk-context-compatibility",
+        "title": "Unsupported media filtering and dangling-call repair are different",
+        "body": "<p>Compatibility filtering and dangling-call repair preserve request validity in different ways. Neither claims missing work was completed.</p><ol class=\"explain-steps\"><li><strong>Project media for the actual model.</strong> <code>UnsupportedContentMiddleware</code> replaces unsupported blocks only on a request copy, preserving original thread media for later capable models. Standard profile fields cover image/audio/video/PDF; image/PDF tool-message support has extra fields. Missing metadata means supported; only explicit false rejects these standard capabilities.</li><li><strong>Apply the stricter inline-document check.</strong> Non-PDF inline documents require a recognized OpenAI model using Responses API and a supported MIME type. Provider-managed URL/file-ID references do not use the same inline-PDF gate. Notices include the original read path when metadata provides it.</li><li><strong>Repair unanswered calls at startup.</strong> <code>PatchToolCallsMiddleware</code> gathers answered IDs and scans valid and invalid assistant calls. For non-null unanswered IDs it inserts error-status tool messages immediately after the call. Invalid calls explain malformed/truncated arguments; ordinary dangling calls say no result was recorded and execution may have been cancelled/interrupted. Calls without IDs are skipped; answered IDs are not duplicated.</li><li><strong>Reset history structurally, not operationally.</strong> Return <code>REMOVE_ALL_MESSAGES</code> followed by patched history, relying on reducer reset semantics. This does not execute missing operations, assert cancelled side effects were rolled back, or fabricate success.</li></ol><aside class=\"callout\"><p><strong>Scope:</strong> unsupported-content handling is compatibility filtering—not moderation, malware scanning, or permission enforcement.</p></aside>",
+        "sources": [
+          {
+            "path": "libs/deepagents/deepagents/middleware/unsupported_content.py",
+            "start": 28,
+            "end": 101,
+            "label": "Profile gates and inline document checks"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/unsupported_content.py",
+            "start": 104,
+            "end": 183,
+            "label": "Request-only media replacement"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/patch_tool_calls.py",
+            "start": 17,
+            "end": 52,
+            "label": "Dangling valid/invalid calls and reset update"
+          },
+          {
+            "path": "libs/deepagents/deepagents/_messages_reducer.py",
+            "start": 61,
+            "end": 69,
+            "label": "Reset sentinel handling"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "sdk-profiles",
+    "group": "Engineering",
+    "title": "Profiles and custom middleware, without accidental policy",
+    "kicker": "Construction defaults versus harness behavior",
+    "summary": "Compose registries, profile overlays, exclusions, caching and rubric-driven revision while keeping the real security boundary visible.",
+    "readingMinutes": 18,
+    "sections": [
+      {
+        "id": "sdk-profiles-shipped-effects",
+        "title": "Why changing only the model can change tools and control flow",
+        "body": "<p>Suppose your report agent changes from an unmatched model to <code>openai:gpt-5.2-codex</code> without any other application edits. The matching harness profile adds LangChain planning middleware, so <code>write_todos</code> can become available. A model identifier can therefore select behavior, not just a different text generator.</p><p>A harness profile is executable configuration, not merely a system prompt. The constructor materializes profile middleware into both main and automatic general-purpose stacks. The example is illustrative; it describes registration behavior, not a guarantee that the model will call the planning tool.</p><div class=\"table-wrap\"><table><thead><tr><th>Shipped match</th><th>Concrete effect</th><th>Consumer implication</th></tr></thead><tbody><tr><td><code>openai:gpt-5.1-codex</code>, <code>openai:gpt-5.2-codex</code>, <code>openai:gpt-5.3-codex</code></td><td>Add a fresh LangChain <code>TodoListMiddleware</code> instance through the profile factory; append Codex behavior and plan-hygiene instructions.</td><td><code>write_todos</code> can appear without an explicit application planning middleware. Do not generalize these exact registrations to every model whose name contains Codex.</td></tr><tr><td>The registered Nemotron 3 Ultra identities across NVIDIA and selected other providers</td><td>Install progress-budget and policy nudges; tool-call shims, compatibility handling and text parsing; file-read continuation notices; filesystem <code>ToolRetryMiddleware</code> with one retry and continue-on-failure; model rate-limit retry middleware; reasoning cleanup; follow-up, entity-resolution and final-answer guards. Override the read-file description and add prompt guidance.</td><td>A model change can alter retries, message projection and final-answer handling. These guards are implemented middleware, not proof of factual correctness or a universal SDK security policy.</td></tr><tr><td>No matching behavior factory, and no caller-added planning</td><td>The core scaffolding still assembles, but it does not itself inject LangChain's todo middleware.</td><td>Inspect the resolved profile and request-visible tools before asserting a fixed default surface.</td></tr></tbody></table></div><aside class=\"callout\"><p><strong>Match exact identities:</strong> Nemotron registration is per model, not provider-wide. Source keys are case-sensitive; a wrapper's reported identity can alter matching. Its factory creates fresh middleware per stack rather than sharing mutable instances. For extra calls, inspect the main profile and each subagent's independently resolved model/profile.</p></aside>",
+        "sources": [
+          {
+            "path": "libs/deepagents/deepagents/profiles/harness/_openai_codex.py",
+            "start": 27,
+            "end": 88,
+            "label": "Exact Codex matches, planning factory and registration"
+          },
+          {
+            "path": "libs/deepagents/deepagents/profiles/harness/_nvidia_nemotron_3_ultra.py",
+            "start": 42,
+            "end": 64,
+            "label": "Exact Nemotron match identities and filesystem retry surface"
+          },
+          {
+            "path": "libs/deepagents/deepagents/profiles/harness/_nvidia_nemotron_3_ultra.py",
+            "start": 1824,
+            "end": 1857,
+            "label": "Executable Nemotron middleware and registration"
+          },
+          {
+            "path": "libs/deepagents/deepagents/graph.py",
+            "start": 841,
+            "end": 855,
+            "label": "Automatic child profile middleware"
+          },
+          {
+            "path": "libs/deepagents/deepagents/graph.py",
+            "start": 906,
+            "end": 954,
+            "label": "Main stack profile materialization"
+          }
+        ]
+      },
+      {
+        "id": "sdk-profiles-two-registries",
+        "title": "Provider profiles construct clients; harness profiles shape agents",
+        "body": "<p>Provider and harness profiles are separate process-level configuration registries. Construction first resolves the model, then selects a harness; routing an individual request does not rerun the whole builder.</p><ol class=\"explain-steps\"><li><strong>Resolve provider construction settings.</strong> <code>ProviderProfile</code> supplies static kwargs, optional <code>pre_init(spec)</code>, and an optional kwargs factory. Compose provider-wide and exact <code>provider:model</code> keys, with exact values taking precedence. Only the first colon separates provider/model. <code>apply_provider_profile</code> runs pre-init, combines static/factory settings, then lets explicit caller kwargs win.</li><li><strong>Account for merge phases.</strong> Hooks execute base then override, stopping on exceptions. Factories likewise run base then override, merging mappings with override keys winning. Factory output follows static kwargs, so a runtime default can supersede a static value: exact identity is not an unconditional winner across all phases.</li><li><strong>Select agent behavior.</strong> <code>HarnessProfile</code> controls base/suffix prompts, tool descriptions/exclusions, middleware exclusions/additions, and automatic general-purpose configuration. A prebuilt model bypasses provider construction defaults but still gets harness lookup. Original strings are used directly; otherwise lookup tries combined exact identity, a provider-qualified identifier exact key, then provider fallback. A bare identifier is not confused with an unrelated provider-wide key.</li></ol><aside class=\"callout\"><p><strong>Lifetime:</strong> register before graph construction. These registries are not per-user authorization databases, and active-model routing does not automatically rebuild construction-time authored prompts or profile-selected stacks.</p></aside>",
+        "sources": [
+          {
+            "path": "libs/deepagents/deepagents/profiles/provider/provider_profiles.py",
+            "start": 37,
+            "end": 129,
+            "label": "Provider construction fields"
+          },
+          {
+            "path": "libs/deepagents/deepagents/profiles/provider/provider_profiles.py",
+            "start": 277,
+            "end": 342,
+            "label": "Provider/exact lookup"
+          },
+          {
+            "path": "libs/deepagents/deepagents/profiles/provider/provider_profiles.py",
+            "start": 393,
+            "end": 410,
+            "label": "Apply precedence"
+          },
+          {
+            "path": "libs/deepagents/deepagents/profiles/provider/provider_profiles.py",
+            "start": 413,
+            "end": 479,
+            "label": "Hook/factory merge sequence"
+          },
+          {
+            "path": "libs/deepagents/deepagents/profiles/harness/harness_profiles.py",
+            "start": 1319,
+            "end": 1387,
+            "label": "Prebuilt model harness resolution"
+          },
+          {
+            "path": "libs/deepagents/deepagents/graph.py",
+            "start": 628,
+            "end": 649,
+            "label": "Construction-time profile lookup"
+          }
+        ]
+      },
+      {
+        "id": "sdk-profiles-merging",
+        "title": "Harness overlays use several identities and merge operations",
+        "body": "<p>Harness overlays use several merge identities. Read these as reference rules, not runtime execution steps.</p><ol class=\"explain-steps\"><li><strong>Merge fields by their own contract.</strong> Scalars use explicit non-<code>None</code> overrides; tool descriptions merge by tool name; excluded tool/middleware sets union. General-purpose fields merge individually, allowing an exact-model profile to re-enable a provider-disabled child or replace just its description. An explicit empty authored string can replace a base prompt; empty and <code>None</code> are not interchangeable.</li><li><strong>Distinguish middleware class from name.</strong> Profile <code>extra_middleware</code> merges by concrete class: replace existing class slots, append novel ones. Caller <code>middleware=</code> instead merges by <code>.name</code>; confusing these can add duplicates. Factories produce fresh instances per assembled stack. Static sequences reuse instances even though materialization returns a fresh list.</li><li><strong>Keep serializable configuration constrained.</strong> <code>HarnessProfileConfig</code> omits runtime-only <code>extra_middleware</code> and stores exclusions as names, not arbitrary import paths. Tests reject unknown keys and <code>extra_middleware</code>. Stable public serialized class aliases can round-trip; arbitrary class paths are not a hidden plugin loader.</li><li><strong>Match description keys exactly.</strong> Preserve <code>{available_agents}</code> in a <code>task</code> description override if specialists should remain visible. Stale tool-description keys silently do nothing. A correctly registered profile can still miss behavior because identity or tool names do not match the constructed surface.</li></ol>",
+        "sources": [
+          {
+            "path": "libs/deepagents/deepagents/profiles/harness/harness_profiles.py",
+            "start": 1164,
+            "end": 1297,
+            "label": "Class merge, unions and general-purpose field merge"
+          },
+          {
+            "path": "libs/deepagents/deepagents/profiles/harness/harness_profiles.py",
+            "start": 775,
+            "end": 801,
+            "label": "Fresh list materialization and prompt overlays"
+          },
+          {
+            "path": "libs/deepagents/deepagents/graph.py",
+            "start": 216,
+            "end": 256,
+            "label": "Caller name-based merge"
+          },
+          {
+            "path": "libs/deepagents/deepagents/profiles/harness/harness_profiles.py",
+            "start": 595,
+            "end": 610,
+            "label": "Task description placeholder"
+          },
+          {
+            "path": "libs/deepagents/tests/unit_tests/test_harness_profiles.py",
+            "start": 98,
+            "end": 119,
+            "label": "Config rejects paths/unknown/runtime-only keys"
+          }
+        ]
+      },
+      {
+        "id": "sdk-profiles-bootstrap",
+        "title": "Built-ins, plugins and import-time costs",
+        "body": "<p>Built-ins and plugins initialize lazily on first registry access; importing the profiles package alone does not bootstrap them. Keep imports, client construction, graph caching, and provider prompt caches conceptually separate.</p><ol class=\"explain-steps\"><li><strong>Load registrations once.</strong> Bootstrap installs NVIDIA, OpenAI, and OpenRouter provider defaults plus model harness profiles, then discovers <code>deepagents.provider_profiles</code> and <code>deepagents.harness_profiles</code> entry points. A condition variable lets one thread initialize while others wait; same-thread registration-hook re-entry returns without deadlock.</li><li><strong>Handle failures by ownership.</strong> Built-in failures propagate and restore pre-bootstrap registry snapshots. Third-party failures log/warn and are isolated. Plugin order follows Python package metadata, and later additive registrations layer on earlier ones; do not rely on unrelated plugins deterministically owning the same key.</li><li><strong>Check exact model matches.</strong> <code>anthropic:claude-sonnet-4-6</code> registers a suffix for parallel tools, investigating before answering, and reflecting on results. This is not evidence that every Anthropic model gets it or that a universal authored base prompt still exists.</li><li><strong>Treat prompt caching as provider integration.</strong> Anthropic caching delegates lazily only for request <code>ChatAnthropic</code>; Bedrock/Fireworks depend on installed modules and ignore unsupported models. Provider behavior and matching rendered prefixes—especially forks—still determine reuse, not an SDK cache-hit guarantee.</li></ol>",
+        "sources": [
+          {
+            "path": "libs/deepagents/deepagents/profiles/_builtin_profiles.py",
+            "start": 57,
+            "end": 99,
+            "label": "Plugin groups and synchronization"
+          },
+          {
+            "path": "libs/deepagents/deepagents/profiles/_builtin_profiles.py",
+            "start": 103,
+            "end": 177,
+            "label": "Lazy bootstrap, built-ins and rollback"
+          },
+          {
+            "path": "libs/deepagents/deepagents/profiles/_builtin_profiles.py",
+            "start": 180,
+            "end": 236,
+            "label": "Plugin failure and ordering contract"
+          },
+          {
+            "path": "libs/deepagents/deepagents/profiles/harness/_anthropic_sonnet_4_6.py",
+            "start": 32,
+            "end": 52,
+            "label": "Exact-model authored suffix"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/_prompt_caching.py",
+            "start": 24,
+            "end": 87,
+            "label": "Lazy Anthropic integration"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/_prompt_caching.py",
+            "start": 90,
+            "end": 126,
+            "label": "Optional provider caching"
+          }
+        ]
+      },
+      {
+        "id": "sdk-profiles-exclusion",
+        "title": "Exclusions are guarded configuration, not a security perimeter",
+        "body": "<p>Exclusions are guarded configuration and model-facing calibration, not a security perimeter. Read middleware and tool exclusions separately.</p><ol class=\"explain-steps\"><li><strong>Filter middleware around replacements.</strong> Apply exclusions before and after caller replacement so excluded defaults cannot be resurrected accidentally. Classes match exact concrete types; strings match <code>.name</code>. Reject private underscore names, unsupported class-path grammar, and protected scaffolding: <code>FilesystemMiddleware</code> and <code>SubAgentMiddleware</code> cannot be removed this way.</li><li><strong>Validate match coverage at the right scope.</strong> Reject exclusions matching nothing, including stale keys/typos. Main-profile matches accumulate across main and automatic GP stacks because an entry may exist in only one. Independently profiled declarative children validate separately; compiled/remote children retain owner-chosen behavior rather than being silently rewritten.</li><li><strong>Filter tools and reject stale calls.</strong> Last-running tool exclusions remove caller and middleware schemas and also reject excluded names at execution. A fabricated or stale call cannot bypass mere schema hiding. Nevertheless, profiles explicitly call this calibration, not a security surface.</li><li><strong>Enforce real capabilities elsewhere.</strong> Direct backend access, filesystem-capable shells, and opaque compiled children can operate outside parent schemas. For read-only operation, restrict backend/process/network permissions and expose the intended subset. Renaming tools, omitting prose, or adding “never edit files” to a suffix is not authorization.</li></ol>",
+        "sources": [
+          {
+            "path": "libs/deepagents/deepagents/graph.py",
+            "start": 259,
+            "end": 285,
+            "label": "Protected scaffolding"
+          },
+          {
+            "path": "libs/deepagents/deepagents/graph.py",
+            "start": 758,
+            "end": 795,
+            "label": "Per-child exclusion checks"
+          },
+          {
+            "path": "libs/deepagents/deepagents/graph.py",
+            "start": 972,
+            "end": 1006,
+            "label": "Main pre/post replacement filtering and coverage"
+          },
+          {
+            "path": "libs/deepagents/deepagents/profiles/harness/harness_profiles.py",
+            "start": 613,
+            "end": 687,
+            "label": "Exclusion contract and explicit security caveat"
+          },
+          {
+            "path": "libs/deepagents/deepagents/profiles/harness/harness_profiles.py",
+            "start": 690,
+            "end": 708,
+            "label": "Compiled/remote stack ownership"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/_tool_exclusion.py",
+            "start": 50,
+            "end": 101,
+            "label": "Schema filtering plus dispatch rejection"
+          }
+        ]
+      },
+      {
+        "id": "sdk-profiles-rubric",
+        "title": "RubricMiddleware adds a bounded evaluate–revise loop",
+        "body": "<p>A rubric gives the agent explicit criteria to evaluate after drafting, such as “the report answers the brief and lists unresolved questions.” <code>RubricMiddleware</code> can turn grader feedback into another model turn. It is public and optional, not core-installed; invocation state containing a rubric activates a lazily built nested LangChain grader.</p><h3>Illustrative draft → feedback → revision → cap</h3><ol class=\"explain-steps\"><li><strong>Draft.</strong> The agent finishes a report. Grader evaluation 1 returns <code>needs_revision</code> because open questions are missing.</li><li><strong>Feedback.</strong> Middleware adds a labelled human revision message and <code>jump_to=\"model\"</code>. The agent can revise the report; this is another graph transition, not the grader editing the file.</li><li><strong>Revision.</strong> Evaluation 2 can return <code>satisfied</code> and stop. If it instead requests revision, another model turn is allowed.</li><li><strong>Cap.</strong> If evaluation 3 still requests revision under the default three-iteration cap, status becomes <code>max_iterations_reached</code>. The graph does not pretend the criteria passed or schedule an unlimited fourth attempt.</li></ol><p>These outcomes are hypothetical, not observed grader verdicts. A consumer still needs to inspect final rubric status before treating a saved <code>/notes/report.txt</code> as accepted.</p><details><summary>Reference: activation, reset, grading inputs, and terminal behavior</summary><ul><li><strong>Bounded attempts.</strong> The default maximum is three grader iterations, validated as a positive non-boolean integer. A new rubric—or the same rubric after a terminal result—resets run ID, iteration count, status, and frozen criteria.</li><li><strong>Natural-stop grading.</strong> The nested grader uses <code>GraderResponse</code> structured output and optional tools/middleware. <code>needs_revision</code> loops as above; other results terminate. Grader interrupts propagate as graph control flow, not <code>grader_error</code>.</li><li><strong>Input and criteria limits.</strong> Payloads use nonce-bracketed rubric/transcript sections, sanitize delimiter-like text, and warn that transcripts are untrusted. Usable criterion names freeze after first reporting. Coverage problems can downgrade “satisfied,” but the initial criterion count is not independently parsed/validated. This is an LLM evaluation aid, not exhaustive requirement or security proof.</li><li><strong>Consumer enforcement.</strong> Inspect final rubric status, callback, or stream event. Non-satisfied termination does not automatically replace the assistant's last answer with a truthful failure notice. Callbacks provide observability; ordinary callback exceptions log. A hard acceptance gate must inspect structured status in application logic.</li></ul></details><aside class=\"callout\"><p><strong>Architectural seam:</strong> hooks add scoped state and change graph transitions without creating another runtime. They do not replace application correctness enforcement.</p></aside>",
+        "sources": [
+          {
+            "path": "libs/deepagents/deepagents/__init__.py",
+            "start": 11,
+            "end": 11,
+            "label": "Public rubric middleware export"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/rubric.py",
+            "start": 491,
+            "end": 550,
+            "label": "Activation, observability and callback contract"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/rubric.py",
+            "start": 558,
+            "end": 657,
+            "label": "Exact defaults and reset logic"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/rubric.py",
+            "start": 659,
+            "end": 720,
+            "label": "Evaluation and interrupt propagation"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/rubric.py",
+            "start": 739,
+            "end": 831,
+            "label": "Cap, coverage handling and lazy grader"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/rubric.py",
+            "start": 1090,
+            "end": 1162,
+            "label": "Sanitized nonce-delimited grading payload"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/rubric.py",
+            "start": 1229,
+            "end": 1273,
+            "label": "Frozen criteria caveat and loop transition"
+          }
+        ]
+      },
+      {
+        "id": "sdk-profiles-debugging",
+        "title": "A practical diagnosis checklist by execution boundary",
+        "body": "<p>Follow the earliest boundary capable of explaining the surprise. This is a diagnosis order, not a claim that every run emits the same events.</p><ol class=\"explain-steps\"><li><strong>Model construction and harness selection.</strong> Was input a string or an initialized object? Which provider kwargs/hooks ran? Did the original identity match an exact model or only provider fallback?</li><li><strong>Graph assembly and request projection.</strong> Did caller middleware replace by name, exclusions remove it, or an automatic GP child appear? Then inspect routing, skills disclosure, capability filtering, and summarization to see what actually reached the provider.</li><li><strong>Tool dispatch and backend effects.</strong> Inspect call ID, argument validation, permission decision, and registered capability: hidden is not unregistered. Check backend result and routing; an offload pointer helps only if its write succeeded and stays reachable.</li><li><strong>State merge and background ownership.</strong> Identify changed fields and reducers for parallel writes. Distinguish task ID from current run ID, child HITL pause from cancellation, and notification delivery from authoritative server state.</li></ol><p><strong>Illustrative middleware composition, not executed here:</strong></p><pre><code class=\"language-python\">from deepagents import create_deep_agent, FilesystemMiddleware\nfrom langchain.agents.middleware import TodoListMiddleware\n\nagent = create_deep_agent(\n    model=\"openai:gpt-5.5\",\n    backend=backend,  # an initialized application-owned backend\n    middleware=[\n        FilesystemMiddleware(\n            backend=backend,\n            tools=[\"read_file\", \"ls\", \"glob\", \"grep\"],\n        ),\n        TodoListMiddleware(),\n    ],\n)</code></pre><p>This replaces the default filesystem slot and adds LangChain planning. It is not a complete sandbox: other tools, child graphs, backend credentials, and process access must match application policy.</p><aside class=\"callout\"><p><strong>Maintainability:</strong> use the narrow existing extension seam rather than copying the constructor into a diverging second harness.</p></aside>",
+        "sources": [
+          {
+            "path": "libs/deepagents/deepagents/_models.py",
+            "start": 35,
+            "end": 57,
+            "label": "String/object construction distinction"
+          },
+          {
+            "path": "libs/deepagents/deepagents/graph.py",
+            "start": 216,
+            "end": 256,
+            "label": "Replacement seam"
+          },
+          {
+            "path": "libs/deepagents/deepagents/graph.py",
+            "start": 835,
+            "end": 904,
+            "label": "Automatic child decisions"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/filesystem.py",
+            "start": 1969,
+            "end": 2044,
+            "label": "Allowlist and registration"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/async_subagents.py",
+            "start": 892,
+            "end": 925,
+            "label": "Run/thread status distinction"
+          },
+          {
+            "path": "libs/deepagents/tests/unit_tests/test_todo_middleware.py",
+            "start": 7,
+            "end": 9,
+            "label": "Planning dependency"
+          }
+        ]
+      }
+    ]
+  }
+]

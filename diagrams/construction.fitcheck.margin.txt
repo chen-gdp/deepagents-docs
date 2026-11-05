@@ -1,0 +1,5 @@
+FILE: /home/christian/Projects/GAT/ai-agent/docs/deepagents-explorer/diagrams/construction.fitcheck.png
+  size: 676x646
+  content bbox: x=47..628, y=32..608
+  margins px: top=32, bottom=37, left=47, right=47
+  margins %: top=5.0, bottom=5.7, left=7.0, right=7.0

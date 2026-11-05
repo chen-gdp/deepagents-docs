@@ -1,0 +1,5 @@
+FILE: /home/christian/Projects/GAT/ai-agent/docs/deepagents-explorer/diagrams/delegation-mobile.fitcheck.png
+  size: 288x373
+  content bbox: x=17..270, y=13..359
+  margins px: top=13, bottom=13, left=17, right=17
+  margins %: top=3.5, bottom=3.5, left=5.9, right=5.9

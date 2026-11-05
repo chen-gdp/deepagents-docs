@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 400" width="320" height="400" role="img" aria-labelledby="title desc" style="--fg:#004987;--muted:#003a5c;--border:#005cb8;--c5:#e7eef6">
+<title id="title">Interactive Code ownership</title>
+<desc id="desc">The terminal client exchanges HTTP requests and SSE output with the graph server. The graph server calls a local or remote tool backend and receives results. Tool backend is a capability boundary, not necessarily a separate process.</desc>
+<defs><marker id="arrow" viewBox="0 0 8 8" refX="8" refY="4" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L8 4 L0 8 Z" fill="var(--border)"/></marker></defs>
+<g font-family="Arial, sans-serif">
+<rect x="20" y="16" width="280" height="76" rx="12" fill="var(--c5)" stroke="var(--border)" stroke-width="1.5"/>
+<text x="160" y="48" text-anchor="middle" fill="var(--fg)" font-size="20" font-weight="700">Terminal client</text>
+<text x="160" y="74" text-anchor="middle" fill="var(--muted)" font-size="18">Input · presentation</text>
+<line x1="160" y1="92" x2="160" y2="162" stroke="var(--border)" stroke-width="2" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+<text x="182" y="134" fill="var(--fg)" font-size="18">HTTP / SSE</text>
+<rect x="20" y="162" width="280" height="76" rx="12" fill="var(--c5)" stroke="var(--border)" stroke-width="1.5"/>
+<text x="160" y="194" text-anchor="middle" fill="var(--fg)" font-size="20" font-weight="700">Graph server</text>
+<text x="160" y="220" text-anchor="middle" fill="var(--muted)" font-size="18">Harness · middleware</text>
+<line x1="160" y1="238" x2="160" y2="308" stroke="var(--border)" stroke-width="2" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+<text x="182" y="280" fill="var(--fg)" font-size="18">Call / result</text>
+<rect x="20" y="308" width="280" height="76" rx="12" fill="var(--c5)" stroke="var(--border)" stroke-width="1.5"/>
+<text x="160" y="340" text-anchor="middle" fill="var(--fg)" font-size="20" font-weight="700">Tool backend</text>
+<text x="160" y="366" text-anchor="middle" fill="var(--muted)" font-size="18">Local or remote</text>
+</g></svg>

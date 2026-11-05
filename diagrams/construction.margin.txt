@@ -1,0 +1,5 @@
+FILE: /home/christian/Projects/GAT/ai-agent/docs/deepagents-explorer/diagrams/construction.png
+  size: 1320x1260
+  content bbox: x=78..1241, y=48..1201
+  margins px: top=48, bottom=58, left=78, right=78
+  margins %: top=3.8, bottom=4.6, left=5.9, right=5.9

@@ -1,0 +1,5 @@
+FILE: /home/christian/Projects/GAT/ai-agent/docs/deepagents-explorer/diagrams/code-processes.fitcheck.png
+  size: 676x350
+  content bbox: x=33..642, y=28..316
+  margins px: top=28, bottom=33, left=33, right=33
+  margins %: top=8.0, bottom=9.4, left=4.9, right=4.9

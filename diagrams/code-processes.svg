@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc" style="--fg:#004987;--muted:#003a5c;--border:#005cb8;--surface:#fff;--accent:#40b4e5;--c5:#e7eef6" viewBox="0 0 760 385" width="760" height="385">
+<title id="title">Code separates presentation from execution</title><desc id="desc">The interactive terminal client communicates with a LangGraph server over HTTP and SSE. The server owns graph execution and invokes tool backends. The backend label denotes capabilities, not necessarily a separate process.</desc>
+<defs><marker id="arrow" viewBox="0 0 8 8" refX="8" refY="4" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L8 4 L0 8 Z" fill="var(--border)"/></marker></defs>
+<g font-family="Arial, sans-serif">
+<rect x="30" y="25" width="300" height="110" rx="12" fill="var(--c5)" stroke="var(--border)" stroke-width="1.5"/>
+<text x="180" y="69" text-anchor="middle" fill="var(--fg)" font-size="26" font-weight="700">Terminal client</text>
+<text x="180" y="107" text-anchor="middle" fill="var(--muted)" font-size="23">Input · presentation</text>
+<rect x="430" y="25" width="300" height="110" rx="12" fill="var(--c5)" stroke="var(--border)" stroke-width="1.5"/>
+<text x="580" y="69" text-anchor="middle" fill="var(--fg)" font-size="26" font-weight="700">Graph server</text>
+<text x="580" y="107" text-anchor="middle" fill="var(--muted)" font-size="23">Harness · middleware</text>
+<line x1="330" y1="80" x2="430" y2="80" stroke="var(--border)" stroke-width="2" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+<text x="380" y="60" text-anchor="middle" fill="var(--fg)" font-size="20">HTTP</text>
+<rect x="430" y="245" width="300" height="110" rx="12" fill="var(--c5)" stroke="var(--border)" stroke-width="1.5"/>
+<text x="580" y="289" text-anchor="middle" fill="var(--fg)" font-size="26" font-weight="700">Tool backend</text>
+<text x="580" y="327" text-anchor="middle" fill="var(--muted)" font-size="23">Local or remote</text>
+<line x1="580" y1="135" x2="580" y2="245" stroke="var(--border)" stroke-width="2" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+</g></svg>

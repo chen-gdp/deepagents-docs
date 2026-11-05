@@ -1,0 +1,5 @@
+FILE: /home/christian/Projects/GAT/ai-agent/docs/deepagents-explorer/diagrams/execution-mobile.fitcheck.png
+  size: 288x492
+  content bbox: x=6..281, y=13..477
+  margins px: top=13, bottom=14, left=6, right=6
+  margins %: top=2.6, bottom=2.8, left=2.1, right=2.1

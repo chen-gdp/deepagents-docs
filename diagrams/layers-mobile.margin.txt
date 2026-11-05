@@ -1,0 +1,5 @@
+FILE: /home/christian/Projects/GAT/ai-agent/docs/deepagents-explorer/diagrams/layers-mobile.png
+  size: 640x828
+  content bbox: x=38..601, y=30..797
+  margins px: top=30, bottom=30, left=38, right=38
+  margins %: top=3.6, bottom=3.6, left=5.9, right=5.9

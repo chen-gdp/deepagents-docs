@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc" style="--fg:#004987;--muted:#003a5c;--border:#005cb8;--surface:#fff;--accent:#40b4e5;--c5:#e7eef6" viewBox="0 0 760 615" width="760" height="615">
+<title id="title">Choose one file route</title><desc id="desc">A virtual file path uses the longest matching mount prefix and strips that prefix before dispatch. Otherwise the original path goes to the default backend. The alternatives are exclusive.</desc>
+<defs><marker id="arrow" viewBox="0 0 8 8" refX="8" refY="4" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L8 4 L0 8 Z" fill="var(--border)"/></marker></defs>
+<g font-family="Arial, sans-serif">
+<rect x="180" y="25" width="400" height="110" rx="12" fill="var(--c5)" stroke="var(--border)" stroke-width="1.5"/>
+<text x="380" y="69" text-anchor="middle" fill="var(--fg)" font-size="26" font-weight="700">Virtual file path</text>
+<text x="380" y="107" text-anchor="middle" fill="var(--muted)" font-size="23">CompositeBackend</text>
+<rect x="180" y="250" width="400" height="110" rx="12" fill="var(--c5)" stroke="var(--border)" stroke-width="1.5"/>
+<text x="380" y="294" text-anchor="middle" fill="var(--fg)" font-size="26" font-weight="700">Longest prefix?</text>
+<text x="380" y="332" text-anchor="middle" fill="var(--muted)" font-size="23">Choose exactly one route</text>
+<line x1="380" y1="135" x2="380" y2="250" stroke="var(--border)" stroke-width="2" marker-end="url(#arrow)"/>
+<line x1="380" y1="360" x2="380" y2="410" stroke="var(--border)" stroke-width="2"/>
+<path class="flow" d="M380 410 H190 V475" fill="none" stroke="var(--border)" stroke-width="2" marker-end="url(#arrow)"/>
+<path class="flow" d="M380 410 H570 V475" fill="none" stroke="var(--border)" stroke-width="2" marker-end="url(#arrow)"/>
+<text x="190" y="392" text-anchor="middle" fill="var(--fg)" font-size="22">Match</text>
+<text x="570" y="392" text-anchor="middle" fill="var(--fg)" font-size="22">No match</text>
+<rect x="30" y="475" width="320" height="110" rx="12" fill="var(--c5)" stroke="var(--border)" stroke-width="1.5"/>
+<text x="190" y="519" text-anchor="middle" fill="var(--fg)" font-size="26" font-weight="700">Matched backend</text>
+<text x="190" y="557" text-anchor="middle" fill="var(--muted)" font-size="23">Strip route prefix</text>
+<rect x="410" y="475" width="320" height="110" rx="12" fill="var(--c5)" stroke="var(--border)" stroke-width="1.5"/>
+<text x="570" y="519" text-anchor="middle" fill="var(--fg)" font-size="26" font-weight="700">Default backend</text>
+<text x="570" y="557" text-anchor="middle" fill="var(--muted)" font-size="23">Use original path</text>
+</g></svg>

@@ -1,0 +1,1072 @@
+[
+  {
+    "id": "backend-contracts",
+    "group": "Storage & safety",
+    "title": "The backend contract: files are not necessarily a filesystem",
+    "kicker": "Start with capabilities, not storage names",
+    "summary": "Understand structured file data, result envelopes, pagination, exact edits, optional execution, and the sync/async bridges that every backend consumer relies on.",
+    "readingMinutes": 18,
+    "sections": [
+      {
+        "id": "backend-contracts-capabilities",
+        "title": "A storage interface, with execution as a separate capability",
+        "body": "<p>A backend answers a narrow question: where do the harness’s file operations go? A file may live in graph state, a LangGraph store namespace, a host filesystem, or a remote execution provider. Storage capability does not imply a shell.</p><p>A <strong>capability</strong> is an operation a backend can actually perform, not a guarantee about where or how safely it runs. To read <code>/notes/brief.txt</code> and write <code>/notes/report.txt</code>, the agent needs file capabilities. Running a report-generation command additionally requires execution capability; choosing storage alone does not grant it.</p><h3>The capability contract</h3><ul><li><strong>File operations are the shared vocabulary.</strong> Backends expose listing, reading, writing, editing, deleting, literal searching, globbing, and byte transfer. <code>StateBackend</code> and <code>StoreBackend</code> can search documents entirely in Python without owning an operating-system process.</li><li><strong>Inheritance is not a completeness check.</strong> <code>BackendProtocol</code> is an abstract-base-class-shaped interface. Ordinary operation methods default to <code>NotImplementedError</code>, but deliberately are not all abstract methods: partial implementations can be instantiated. Deletion is explicitly optional; its support helper compares the concrete class’s <code>delete</code> with the base implementation. Implement every operation your consumers expose.</li><li><strong>Execution is an additional capability, not an isolation certificate.</strong> <code>SandboxBackendProtocol</code> adds an <code>id</code> and <code>execute</code>/<code>aexecute</code>. The unrestricted host-backed <code>LocalShellBackend</code> implements it too. Public package exports collect state, store, composite, disk, local-shell, LangSmith, and Context Hub backends; fuller result and sandbox types live in implementation modules.</li></ul><aside class=\"callout\"><p><strong>Choose authority first:</strong> decide whether the agent should possess execution before selecting a backend. Do not teach shell fallbacks for file-only backends. Conversely, shell commands do not automatically inherit structured file tools’ permission checks or literal-search result contract.</p></aside>",
+        "sources": [
+          {
+            "path": "libs/deepagents/deepagents/backends/protocol.py",
+            "start": 403,
+            "end": 448,
+            "label": "Base capability contract"
+          },
+          {
+            "path": "libs/deepagents/deepagents/backends/protocol.py",
+            "start": 892,
+            "end": 947,
+            "label": "Execution extension"
+          },
+          {
+            "path": "libs/deepagents/deepagents/backends/protocol.py",
+            "start": 991,
+            "end": 1006,
+            "label": "Optional deletion detection"
+          },
+          {
+            "path": "libs/deepagents/deepagents/backends/__init__.py",
+            "start": 1,
+            "end": 23,
+            "label": "Public backend exports"
+          }
+        ]
+      },
+      {
+        "id": "backend-contracts-data",
+        "title": "FileData and the different kinds of failure",
+        "body": "<p>A successful backend read returns a <strong>result envelope</strong>: a record containing the payload and metadata about the operation. The payload is <code>FileData</code>, not yet the numbered text the model sees. Its <code>content</code> is always a string: ordinary text uses <code>encoding=\"utf-8\"</code>; arbitrary binary bytes can be represented as a base64 string.</p><h3>Start with one successful read</h3><p><strong>Illustrative record, not executed:</strong> suppose <code>/notes/brief.txt</code> contains exactly <code>Goal: summarize\\nAudience: developers\\n</code>. A full text read can produce the following record; optional timestamps are omitted here.</p><pre><code class=\"language-python\">ReadResult(\n    file_data={\n        \"content\": \"Goal: summarize\\nAudience: developers\\n\",\n        \"encoding\": \"utf-8\",\n    },\n    total_lines=2,\n    start_line=1,\n    end_line=2,\n    next_offset=None,\n    error=None,\n)</code></pre><p>First check <code>error</code>, then interpret <code>file_data</code> using its encoding. Here the range covers both source lines and <code>next_offset=None</code> means no remaining page.</p><h3>Read that same brief one line at a time</h3><ol class=\"explain-steps\"><li><strong>Request offset 0, limit 1.</strong> The payload is <code>Goal: summarize\\n</code>, with <code>total_lines=2</code>, <code>start_line=1</code>, <code>end_line=1</code>, and <code>next_offset=1</code>.</li><li><strong>Resume at offset 1, limit 1.</strong> The payload is <code>Audience: developers\\n</code>, with source range 2–2 and <code>next_offset=None</code>. The windows changed; the stored file did not. The next section explains the zero-based offset and one-based line-number relationship.</li></ol><h3>Other results and failure channels</h3><div class=\"table-wrap\"><table><thead><tr><th>Operation family</th><th>Result data</th><th>What to inspect</th></tr></thead><tbody><tr><td>read</td><td><code>ReadResult.file_data</code> and pagination fields</td><td><code>error</code> first, then encoding and window metadata</td></tr><tr><td>write / edit / delete</td><td>path; edit also reports occurrences</td><td>Human-readable <code>error</code>, not a standardized exception code</td></tr><tr><td>ls / grep / glob</td><td>Structured entries or matches</td><td>Errors and incompleteness, not just whether a list is empty</td></tr><tr><td>upload / download</td><td>One response per requested input; downloads contain bytes</td><td>Per-item <code>error</code>, preserving correlation and partial success</td></tr></tbody></table></div><ul><li><strong>Timestamps distinguish inspection from mutation.</strong> <code>FileData</code> has optional creation and modification timestamps. Helpers create UTC ISO strings. Updating preserves a present creation timestamp, retains encoding unless the caller changes it, and advances modification time. Reading a slice instead copies timestamps unchanged: inspection is not mutation.</li><li><strong>Transfer errors are per item, not one batch verdict.</strong> The four named errors are <code>file_not_found</code>, <code>permission_denied</code>, <code>is_directory</code>, and <code>invalid_path</code>. Backend-specific strings are also permitted, so authentication or transport failures need not fit those four categories. Do not collapse failures into “missing file” or infer batch success from the first item.</li><li><strong>Result envelopes do not suppress every exception.</strong> Each backend chooses what to translate. Store conversion, for example, rejects unsupported content types; provider adapters differ in whether transfer exceptions are caught per file. Direct callers need both result handling and an exception policy appropriate to their chosen backend.</li></ul>",
+        "sources": [
+          {
+            "path": "libs/deepagents/deepagents/backends/protocol.py",
+            "start": 39,
+            "end": 145,
+            "label": "Transfer error vocabulary and metadata"
+          },
+          {
+            "path": "libs/deepagents/deepagents/backends/protocol.py",
+            "start": 187,
+            "end": 232,
+            "label": "FileData and read envelope"
+          },
+          {
+            "path": "libs/deepagents/deepagents/backends/protocol.py",
+            "start": 277,
+            "end": 400,
+            "label": "Mutation and search results"
+          },
+          {
+            "path": "libs/deepagents/deepagents/backends/utils.py",
+            "start": 513,
+            "end": 565,
+            "label": "Timestamp semantics"
+          },
+          {
+            "path": "libs/deepagents/deepagents/backends/store.py",
+            "start": 170,
+            "end": 206,
+            "label": "Conversion can raise"
+          },
+          {
+            "path": "libs/deepagents/deepagents/backends/utils.py",
+            "start": 623,
+            "end": 694,
+            "label": "Successful text read and page-window metadata"
+          }
+        ]
+      },
+      {
+        "id": "backend-contracts-read",
+        "title": "Pagination is a source-line contract, not display formatting",
+        "body": "<p>Read offsets are zero-based; reported source-line numbers are one-based. Pagination describes source text, not the line-number gutters added by filesystem middleware. Gutters never become stored file contents.</p><h3>Follow a page window</h3><p><strong>Illustrative trace, not executed:</strong> assume <code>/notes/brief.txt</code> contains six lines, <code>one\\ntwo\\nthree\\nfour\\nfive\\nsix</code>. The last line deliberately has no final newline.</p><ol class=\"explain-steps\"><li><strong>Request the middle page.</strong> <code>read(\"/notes/brief.txt\", offset=2, limit=2)</code> skips two source lines. Its payload content is <code>three\\nfour\\n</code>, with <code>total_lines=6</code>, <code>start_line=3</code>, <code>end_line=4</code>, and <code>next_offset=4</code>.</li><li><strong>Resume using the returned offset unchanged.</strong> A second call with <code>offset=4, limit=2</code> returns <code>five\\nsix</code>, source lines 5–6, and <code>next_offset=None</code>. Adding one to the resume offset would incorrectly skip line 5.</li><li><strong>Let middleware format the page afterward.</strong> Display gutters can identify lines 3 and 4, but the backend payload contains only their source text. An edit should match that text, not copied gutter characters.</li></ol><h3>How the shared slicer handles boundaries</h3><ul><li><strong>Clamp the requested window and handle empty content.</strong> Negative offsets and limits become zero. Empty or whitespace-only content gets its special empty-content behavior before the zero-limit branch. For nonblank text, zero limit returns an empty payload with <code>no_lines_requested=True</code>: no window was inspected, not an empty file.</li><li><strong>Slice source lines without inventing a final newline.</strong> The slicer uses <code>splitlines(keepends=True)</code>, preserving whether the last line had a terminator. Within the returned window it normalizes CRLF and CR to LF. An offset at or beyond the available nonblank lines returns an error.</li><li><strong>Report the next starting position.</strong> A real page has <code>start_line=offset+1</code> and <code>end_line</code> equal to its last returned source line. When more lines remain, <code>next_offset=end_line</code>. This already is the next zero-based position; do not increment it again.</li></ul><details><summary>ReadResult invariants and nontext reads</summary><p><code>ReadResult.__post_init__</code> makes malformed pagination fail visibly: start and end must appear together, the range must run forward, total lines cannot be smaller than its end, and a resume offset must equal the end-line number. An uninspected-window flag cannot coexist with errors or pagination metadata.</p><p>Binary and media-oriented reads may bypass slicing; inspect encoding and backend behavior before assuming text pagination.</p></details>",
+        "sources": [
+          {
+            "path": "libs/deepagents/deepagents/backends/utils.py",
+            "start": 623,
+            "end": 694,
+            "label": "Shared slicing algorithm"
+          },
+          {
+            "path": "libs/deepagents/deepagents/backends/protocol.py",
+            "start": 234,
+            "end": 274,
+            "label": "Pagination invariants"
+          },
+          {
+            "path": "libs/deepagents/deepagents/backends/protocol.py",
+            "start": 454,
+            "end": 487,
+            "label": "Source versus formatted display"
+          },
+          {
+            "path": "libs/deepagents/deepagents/backends/state.py",
+            "start": 193,
+            "end": 204,
+            "label": "Non-text bypass"
+          }
+        ]
+      },
+      {
+        "id": "backend-contracts-edit",
+        "title": "Exact replacement and search completeness",
+        "body": "<p>Edits are exact substring replacements, not fuzzy patches. Search has an equally important distinction: no matches and incomplete evidence are different outcomes.</p><h3>How an exact edit is accepted</h3><ol class=\"explain-steps\"><li><strong>Validate the old string and count matches.</strong> The shared helper rejects an empty old string and errors when no occurrence exists. Several occurrences with <code>replace_all</code> false require unique surrounding context. Once accepted, Python string replacement performs the edit and the result reports the count. State and store reject text edits of base64 files.</li><li><strong>Keep trailing-newline differences explicit.</strong> If the old string ends in a newline but the file ends in its unterminated form, the helper does not relax the match. It returns a targeted explanation. If the stripped form is also ambiguous, the message requests both removal of the trailing newline and additional context. Read-time newline preservation therefore affects edit correctness.</li></ol><h3>Read search results in two parts</h3><ol class=\"explain-steps\"><li><strong>Inspect completeness before interpreting absence.</strong> <code>GrepResult</code> can contain valid matches alongside an error and has a separate <code>truncated</code> flag. <code>GlobResult</code> also distinguishes budget exhaustion, unreadable subtrees, and clipped transport. Narrower patterns can help a budget-limited walk, but cannot grant access to unreadable subtrees. A single backend’s grep cap is total across files; exactly reaching it is complete unless another match was dropped.</li><li><strong>Use this glob contract, not shell assumptions.</strong> Slash-free patterns match basenames at any depth; slash-containing patterns match relative paths; a leading slash anchors to the search root. A bare <code>*.yml</code> can find a normal basename inside a dot-directory, while <code>**/*.yml</code> does not descend through dot-directory segments. Classic shell globbing and plain <code>fnmatch</code> are not interchangeable substitutes.</li></ol>",
+        "sources": [
+          {
+            "path": "libs/deepagents/deepagents/backends/utils.py",
+            "start": 697,
+            "end": 754,
+            "label": "Exact replacement and EOF diagnostics"
+          },
+          {
+            "path": "libs/deepagents/deepagents/backends/state.py",
+            "start": 237,
+            "end": 252,
+            "label": "Binary edit rejection"
+          },
+          {
+            "path": "libs/deepagents/deepagents/backends/protocol.py",
+            "start": 343,
+            "end": 400,
+            "label": "Search incompleteness"
+          },
+          {
+            "path": "libs/deepagents/deepagents/backends/protocol.py",
+            "start": 533,
+            "end": 542,
+            "label": "Grep cap boundary"
+          },
+          {
+            "path": "libs/deepagents/deepagents/backends/protocol.py",
+            "start": 598,
+            "end": 648,
+            "label": "Glob semantics"
+          }
+        ]
+      },
+      {
+        "id": "backend-contracts-async",
+        "title": "Async convenience does not imply cancellation of work",
+        "body": "<p>The base interface bridges many async methods with <code>asyncio.to_thread</code>. A synchronous backend can participate in an async graph without directly blocking the event loop, but that does not create a new storage engine or make its work cancellable.</p><h3>Separate three async mechanisms</h3><ol class=\"explain-steps\"><li><strong>A caller timeout need not stop work.</strong> Standard <code>agrep</code> wraps its thread call in an async timeout. Expiry bounds the caller’s wait, not the worker thread’s lifetime. A slow operation can continue consuming resources after a timeout result has reached its caller.</li><li><strong>Signature compatibility changes where limits apply.</strong> Grep introspection detects <code>max_count</code>. Modern implementations receive the cap during search; older signatures run first and are trimmed afterward. Both return bounded lists, but only the former can avoid materializing uncapped results. Execution’s timeout-support probe similarly inspects and caches the concrete <code>execute</code> signature; direct protocol-level async execution forwards an explicit timeout only if supported.</li><li><strong>Native overrides can own real async transports.</strong> Store reads/writes call <code>aget</code>/<code>aput</code>. <code>BaseSandbox</code> async file helpers call <code>aexecute</code>, letting providers centralize native async transport. LangSmith caches a client belonging to its creating event loop and provides <code>aclose</code> to release the pool. Reuse across unrelated loops is unsupported.</li></ol><aside class=\"callout\"><p><strong>When debugging hangs:</strong> distinguish backend command timeout, outer caller deadline, transport timeout, and surviving local threads. They have different cleanup guarantees; one expiring does not prove the others stopped.</p></aside>",
+        "sources": [
+          {
+            "path": "libs/deepagents/deepagents/backends/protocol.py",
+            "start": 490,
+            "end": 497,
+            "label": "Basic async bridge"
+          },
+          {
+            "path": "libs/deepagents/deepagents/backends/protocol.py",
+            "start": 558,
+            "end": 596,
+            "label": "Bounded wait and cap compatibility"
+          },
+          {
+            "path": "libs/deepagents/deepagents/backends/protocol.py",
+            "start": 934,
+            "end": 988,
+            "label": "Execution signature compatibility"
+          },
+          {
+            "path": "libs/deepagents/deepagents/backends/store.py",
+            "start": 401,
+            "end": 426,
+            "label": "Native async store read"
+          },
+          {
+            "path": "libs/deepagents/deepagents/backends/store.py",
+            "start": 451,
+            "end": 472,
+            "label": "Native async store write"
+          },
+          {
+            "path": "libs/deepagents/deepagents/backends/langsmith.py",
+            "start": 97,
+            "end": 139,
+            "label": "Async client ownership"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "storage-lifetimes",
+    "group": "Storage & safety",
+    "title": "State, store, and durable lifetimes",
+    "kicker": "Persistence is a topology decision",
+    "summary": "Trace graph-channel writes and reducers, understand namespace isolation and store costs, and separate checkpoint restoration from external side-effect rollback.",
+    "readingMinutes": 16,
+    "sections": [
+      {
+        "id": "storage-lifetimes-state",
+        "title": "StateBackend reads the current graph, not an instance-owned dictionary",
+        "body": "<p>Ask two separate questions about a file: <strong>which identity selects it</strong>, and <strong>what storage keeps it alive</strong>? Reusing a Python backend instance answers neither. State files follow graph execution; store files follow a namespace in the selected store.</p><p>A <strong>thread</strong> is the conversation identity used to resume graph state. A <strong>checkpoint</strong> is a saved graph-state position; a <strong>checkpointer</strong> saves and retrieves those positions. A store <strong>namespace</strong> is a tuple of strings grouping keys, such as <code>(\"user-42\", \"filesystem\")</code>. A namespace is not automatically a thread or an authorization rule.</p><div class=\"table-wrap\"><table><thead><tr><th>Backend</th><th>What selects /notes/brief.txt?</th><th>What must survive?</th></tr></thead><tbody><tr><td>StateBackend</td><td>The active thread’s <code>files</code> graph channel</td><td>Its saved state, through the configured checkpointer when resuming runs</td></tr><tr><td>StoreBackend</td><td>The namespace factory’s tuple plus the file-path key</td><td>The selected store’s data and the same namespace mapping</td></tr></tbody></table></div><h3>Follow one file through three lifetimes</h3><p><strong>Illustrative trace, not executed:</strong> thread <code>A</code> writes <code>/notes/brief.txt</code>. Compare a state-backed version with a store-backed version using namespace <code>(\"user-42\", \"filesystem\")</code>. Assume later reads do not overwrite or delete the file.</p><ol class=\"explain-steps\"><li><strong>Continue thread A.</strong> A later graph invocation can read the state version if it resumes the saved thread state through its checkpointer. The store version is available when it resolves the same namespace against the same retained store data.</li><li><strong>Start an independent thread B.</strong> With no copied initial files, B does not inherit A’s state file. B can read the store version if its trusted namespace factory returns the same tuple. A different namespace selects different keys even when the path string is identical.</li><li><strong>Restart the application process.</strong> A’s state version is recoverable only if checkpoint data survives and the application reconnects to it with the appropriate thread/configuration. The store version requires retained store data and the same namespace. Fresh in-memory checkpointer/store instances do not manufacture restart durability.</li></ol><h3>How StateBackend writes within a running graph</h3><p><code>StateBackend()</code> owns no files dictionary. Each operation resolves the active LangGraph configuration and requires its internal read/send hooks. One instance follows the current graph task instead of capturing one conversation’s snapshot. A <strong>superstep</strong> is a graph execution round whose task writes are applied at its boundary.</p><ol class=\"explain-steps\"><li><strong>Read the current graph view.</strong> Resolve configuration and call <code>read(\"files\", fresh=True)</code>. Fresh reads apply pending task writes through the files reducer, so a tool can write and immediately read or edit a file within the same superstep.</li><li><strong>Build only the changed file data.</strong> Create or update one <code>FileData</code>, preserving creation metadata on overwrite. Mutation supplies a partial dictionary, not a replacement for the entire filesystem.</li><li><strong>Queue the channel update.</strong> Send <code>{path: file_data}</code> to the <code>files</code> channel. The send queues task writes; the node boundary commits them to graph state. Callers do not extract a separate “files update” from the result and merge it themselves.</li><li><strong>Return the path and allow a fresh reread.</strong> Return <code>WriteResult(path=...)</code>. Subsequent fresh reads see the queued value even before the node boundary.</li></ol><p><strong>Illustrative in-tool trace:</strong> write <code>/notes/brief.txt</code> with “first,” edit “first” to “revised,” then read it. Fresh reads make the edit find the newly queued file.</p><aside class=\"callout\"><p><strong>Outside a graph:</strong> the same sequence fails at configuration lookup with a clear runtime error; it does not create an object-local filesystem. Supply initial files through graph invocation input instead of writing directly before execution.</p></aside>",
+        "sources": [
+          {
+            "path": "libs/deepagents/deepagents/backends/state.py",
+            "start": 38,
+            "end": 119,
+            "label": "Graph context and fresh reads"
+          },
+          {
+            "path": "libs/deepagents/deepagents/backends/state.py",
+            "start": 206,
+            "end": 252,
+            "label": "Channel mutation sequence"
+          },
+          {
+            "path": "libs/deepagents/deepagents/graph.py",
+            "start": 1008,
+            "end": 1016,
+            "label": "Separate checkpointer and store dependencies"
+          },
+          {
+            "path": "libs/deepagents/deepagents/backends/store.py",
+            "start": 90,
+            "end": 168,
+            "label": "Store and namespace selection per operation"
+          },
+          {
+            "path": "libs/deepagents/tests/unit_tests/backends/test_store_backend.py",
+            "start": 14,
+            "end": 29,
+            "label": "Explicit in-memory store example"
+          }
+        ]
+      },
+      {
+        "id": "storage-lifetimes-reducer",
+        "title": "Merging files, deletions, and checkpoint scope",
+        "body": "<p>The filesystem state schema uses a <code>DeltaChannel</code>: it records file changes and periodically materializes a snapshot to bound the work needed to reconstruct the channel. Here <code>snapshot_frequency=50</code> means snapshots about every 50 Pregel steps. It is <strong>not</strong> a 50-step retention limit, a file expiry setting, or a promise of durable storage.</p><h3>How state changes combine</h3><ul><li><strong>The reducer merges keys, not competing text edits.</strong> A reducer is the function combining channel updates. This one copies the prior dictionary once, applies step writes in order, overwrites named keys, and treats <code>None</code> as deletion. Unrelated file updates preserve one another. Several writes to one key follow the supplied sequence; there is no semantic conflict-resolution algorithm merging different edits.</li><li><strong>Deletion respects a path-component boundary.</strong> State deletion strips a trailing slash, matches the exact key and keys starting with that base plus a slash, then sends tombstones. Deleting <code>/work</code> includes <code>/work/a.txt</code>, not <code>/workspace/a.txt</code>. Flat state can contain an exact file key and nested keys simultaneously; listings synthesize apparent directories from prefixes, not inodes.</li><li><strong>“Ephemeral” is not “one tool call.”</strong> A supplied LangGraph checkpointer can retain thread state between runs. Without durable checkpoint storage, the backend itself supplies no disk durability. The SDK passes <code>checkpointer</code> and <code>store</code> separately: checkpoints concern graph state; stores concern external shared data. They are not interchangeable memory mechanisms.</li></ul><aside class=\"callout\"><p><strong>External effects are not graph deltas:</strong> restoring graph state does not promise to undo writes to a separate store, host filesystem, Hub repository, or sandbox. For example, rewinding the graph after writing a host-backed <code>/notes/report.txt</code> does not restore that file’s previous bytes. Plan side-effect idempotency and cleanup at the application boundary.</p></aside>",
+        "sources": [
+          {
+            "path": "libs/deepagents/deepagents/middleware/filesystem.py",
+            "start": 1241,
+            "end": 1302,
+            "label": "Reducer and DeltaChannel"
+          },
+          {
+            "path": "libs/deepagents/deepagents/backends/state.py",
+            "start": 125,
+            "end": 173,
+            "label": "Virtual directories"
+          },
+          {
+            "path": "libs/deepagents/deepagents/backends/state.py",
+            "start": 254,
+            "end": 278,
+            "label": "Deletion tombstones"
+          },
+          {
+            "path": "libs/deepagents/deepagents/graph.py",
+            "start": 1004,
+            "end": 1018,
+            "label": "Separate persistence dependencies"
+          },
+          {
+            "path": "libs/deepagents/deepagents/backends/store.py",
+            "start": 428,
+            "end": 449,
+            "label": "Store effects are immediate adapter calls"
+          }
+        ]
+      },
+      {
+        "id": "storage-lifetimes-store",
+        "title": "StoreBackend namespace resolution is the isolation seam",
+        "body": "<p><code>StoreBackend</code> requires a namespace factory. Namespace selection is the isolation seam: different threads intentionally share files when they resolve to the same namespace, not merely because they use the same backend class.</p><h3>Read the storage contract in four parts</h3><ol class=\"explain-steps\"><li><strong>Resolve identity on every operation.</strong> Each operation obtains a runtime and calls the factory, allowing a user identity plus an application-specific “filesystem” component. Inject the store explicitly or obtain it from active graph execution. Outside a graph, an explicit store and constant factory work with runtime <code>None</code>; dereferencing unavailable runtime produces a clarified runtime error.</li><li><strong>Validate namespace syntax, then establish authorization separately.</strong> The validator rejects an empty tuple, non-string or empty components, and characters outside ASCII alphanumerics plus hyphen, underscore, dot, at-sign, plus, colon, and tilde. Wildcards are forbidden to prevent lookup expansion. These checks do not authorize users: derive identity from trusted runtime context, not an agent-controlled identifier that could select another tenant.</li><li><strong>Treat paths as store keys.</strong> Reads use <code>store.get(namespace, file_path)</code>. Writes read the old value for metadata, build <code>FileData</code>, then call <code>put</code>. Edits similarly read, check exact occurrences, and write. No compare-and-swap or transaction spans that read-modify-write; concurrent editors can overwrite accepted updates unless the store or application adds stronger coordination.</li><li><strong>Choose durability explicitly.</strong> “Persistent, cross-thread” names the storage seam, not a guarantee that every <code>BaseStore</code> survives restart. Tests use <code>InMemoryStore</code>; the adapter does not manufacture durable media. Durable cross-conversation memory needs an appropriate store implementation and stable namespace.</li></ol>",
+        "sources": [
+          {
+            "path": "libs/deepagents/deepagents/backends/store.py",
+            "start": 42,
+            "end": 87,
+            "label": "Namespace validation"
+          },
+          {
+            "path": "libs/deepagents/deepagents/backends/store.py",
+            "start": 90,
+            "end": 168,
+            "label": "Store and runtime resolution"
+          },
+          {
+            "path": "libs/deepagents/deepagents/backends/store.py",
+            "start": 428,
+            "end": 513,
+            "label": "Read-modify-write without adapter CAS"
+          },
+          {
+            "path": "libs/deepagents/tests/unit_tests/backends/test_store_backend.py",
+            "start": 14,
+            "end": 29,
+            "label": "Explicit in-memory store usage"
+          }
+        ]
+      },
+      {
+        "id": "storage-lifetimes-costs",
+        "title": "Listing, scanning, legacy data, and binary round-trips",
+        "body": "<p>Backend names do not determine lifetime or cost. Check the actual storage implementation, namespace, resource, and conversion path.</p><h3>Three store behaviors to budget for</h3><ol class=\"explain-steps\"><li><strong>Small directory requests can scan large namespaces.</strong> Listing searches the namespace in pages of 100 until an empty or short page, materializes items, then filters prefixes locally. This avoids dependence on a store’s filtering semantics, but broad listing/search cost scales with namespace size even for a small directory. Async pagination uses the native async search API.</li><li><strong>Legacy data conversion can fail differently from absence.</strong> Old <code>list[str]</code> content is joined without mutating the stored item; missing encoding defaults to UTF-8; only string timestamps survive conversion. Unsupported content types raise <code>TypeError</code>, absent content raises <code>ValueError</code>. Some read/edit paths translate the latter into result errors, but do not universally catch the former. Corrupt schema is not simply a missing file.</li><li><strong>Byte transfer and text mutation follow different encoding rules.</strong> Uploads try UTF-8, base64-encode undecodable bytes, and store fresh file data; downloads decode using stored encoding. Ordinary text writes force UTF-8 even over binary entries. Binary text edits are rejected. State/store binary-grep tests assert that binary payloads neither appear as matches nor consume the match budget.</li></ol><div class=\"table-wrap\"><table><thead><tr><th>Where bytes live</th><th>What provides lifetime</th><th>Primary diagnostic</th></tr></thead><tbody><tr><td>StateBackend</td><td>Thread state; configured checkpointer for retention across runs</td><td>Correct thread and graph context?</td></tr><tr><td>StoreBackend</td><td>Chosen store implementation and namespace</td><td>Same trusted namespace and durable store?</td></tr><tr><td>FilesystemBackend</td><td>Host filesystem or mounted volume</td><td>Correct root and process permissions?</td></tr><tr><td>Remote sandbox</td><td>Provider resource lifetime and volumes</td><td>Same resource ID, still alive?</td></tr><tr><td>ContextHubBackend</td><td>Hub commits plus adapter cache</td><td>Commit accepted, cache refreshed after conflict?</td></tr></tbody></table></div>",
+        "sources": [
+          {
+            "path": "libs/deepagents/deepagents/backends/store.py",
+            "start": 230,
+            "end": 304,
+            "label": "Paginated namespace scans"
+          },
+          {
+            "path": "libs/deepagents/deepagents/backends/store.py",
+            "start": 318,
+            "end": 328,
+            "label": "Local path filtering"
+          },
+          {
+            "path": "libs/deepagents/deepagents/backends/store.py",
+            "start": 170,
+            "end": 206,
+            "label": "Legacy conversion"
+          },
+          {
+            "path": "libs/deepagents/deepagents/backends/store.py",
+            "start": 663,
+            "end": 727,
+            "label": "Binary transfer encoding"
+          },
+          {
+            "path": "libs/deepagents/tests/unit_tests/backends/test_store_backend.py",
+            "start": 51,
+            "end": 67,
+            "label": "Binary grep regression"
+          },
+          {
+            "path": "libs/deepagents/deepagents/backends/state.py",
+            "start": 38,
+            "end": 48,
+            "label": "Thread-scoped state"
+          },
+          {
+            "path": "libs/deepagents/deepagents/backends/filesystem.py",
+            "start": 178,
+            "end": 180,
+            "label": "Host root"
+          },
+          {
+            "path": "libs/deepagents/deepagents/backends/context_hub.py",
+            "start": 345,
+            "end": 377,
+            "label": "Hub commit persistence"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "filesystem-host",
+    "group": "Storage & safety",
+    "title": "Host filesystem access and the shell boundary",
+    "kicker": "Virtual paths are not process isolation",
+    "summary": "Follow real-path resolution, symlink checks, permanent mutations, search fallback, and the unrestricted subprocess behavior of LocalShellBackend.",
+    "readingMinutes": 14,
+    "sections": [
+      {
+        "id": "filesystem-host-resolution",
+        "title": "How a virtual path reaches a host file",
+        "body": "<p><code>FilesystemBackend</code> exposes real disk files through backend paths. In its default <strong>virtual mode</strong>, a leading slash means “from the configured backend root,” not “from the host’s filesystem root.” The root is the resolved supplied directory, or the process working directory if none is supplied.</p><h3>Map a normal file before considering aliases</h3><p><strong>Illustrative mapping, not executed:</strong> configure <code>FilesystemBackend(root_dir=\"/srv/work\")</code>. Assume that root and its <code>notes</code> directory are ordinary directories, not symlinks.</p><div class=\"table-wrap\"><table><thead><tr><th>Backend path</th><th>Resolved host path</th><th>Meaning</th></tr></thead><tbody><tr><td><code>/notes/brief.txt</code></td><td><code>/srv/work/notes/brief.txt</code></td><td>Read the brief under the application root</td></tr><tr><td><code>notes/brief.txt</code></td><td><code>/srv/work/notes/brief.txt</code></td><td>The resolver supplies the leading virtual slash</td></tr><tr><td><code>/notes/report.txt</code></td><td><code>/srv/work/notes/report.txt</code></td><td>A write creates or overwrites a real host file</td></tr></tbody></table></div><h3>How virtual resolution works</h3><ol class=\"explain-steps\"><li><strong>Normalize and reject traversal-like input.</strong> The resolver adds a leading slash when absent and rejects the substring <code>..</code>. This is stricter than middleware’s component-based validation: a filename containing two dots can pass virtual path validation but fail this resolver.</li><li><strong>Resolve symlinks and verify containment.</strong> The joined path is resolved through symlinks and checked to remain relative to the root. Symlink loops are explicitly checked. An absolute-looking virtual input cannot simply bypass the root.</li><li><strong>Keep layer-specific input rules in view.</strong> Middleware rejects a leading tilde before normalization; the disk resolver prepends a slash before its own leading-tilde test. These layers do not necessarily accept identical inputs. Read their actual code rather than generalizing from documentation.</li></ol><p><strong>Nonvirtual mode changes the authority.</strong> Absolute paths are host paths; relative paths resolve against the backend’s configured working directory. The root is a convenience base, not confinement. Relative traversal or absolute host paths can reach outside it; use this mode only when that authority is intentional.</p><aside class=\"callout\"><p><strong>Permission coordinates:</strong> <code>_real_path</code> exposes symlink-resolved paths: virtual coordinates in virtual mode, host-root-relative coordinates otherwise. Middleware recursively applies this through composite mounts, so requested and resolved targets can both be checked.</p><p><strong>Not race-free isolation:</strong> resolution and opening are separate. Validation and <code>O_NOFOLLOW</code> are guardrails, not OS-level protection against hostile concurrent filesystem modification.</p></aside>",
+        "sources": [
+          {
+            "path": "libs/deepagents/deepagents/backends/filesystem.py",
+            "start": 139,
+            "end": 242,
+            "label": "Virtual and host path resolution"
+          },
+          {
+            "path": "libs/deepagents/deepagents/backends/utils.py",
+            "start": 882,
+            "end": 909,
+            "label": "Middleware validator differs"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/filesystem.py",
+            "start": 422,
+            "end": 463,
+            "label": "Resolved-target permission checks"
+          }
+        ]
+      },
+      {
+        "id": "filesystem-host-mutations",
+        "title": "Reading and mutating real bytes",
+        "body": "<p>A host-backed write changes real bytes immediately; it is not a graph-state delta. A line-window request does not imply a window-sized disk read, and a result error does not promise that no external change occurred.</p><h3>Follow the report’s host effects</h3><p><strong>Illustrative trace, not executed:</strong> with root <code>/srv/work</code> and ordinary directories, read <code>/notes/brief.txt</code>, then write <code>/notes/report.txt</code> with “Draft.” The write changes <code>/srv/work/notes/report.txt</code>. Restoring an older graph checkpoint does not restore that file’s previous contents.</p><p>If you then delete <code>/notes/report.txt</code> successfully, that host file is unlinked; the brief remains. Deleting the directory <code>/notes</code> instead recursively removes both files and other contents. Neither operation means “remove this only from the model’s context.” A later host read sees the resulting filesystem, not a checkpoint’s earlier view.</p><h3>Read each operation’s effects separately</h3><ul><li><strong>Reads load text before pagination.</strong> The backend resolves the path, verifies a regular file, and opens with <code>O_NOFOLLOW</code> where available. Extensions select base64 binary content or UTF-8 text; video has a dedicated size guard. Ordinary text is read before shared slicing, so small windows need not reduce memory proportionally. Empty/whitespace-only files get an empty-content reminder; decoding failures become read-result errors.</li><li><strong>Writes overwrite existing files.</strong> Parent directories are created, then create-and-truncate flags open the destination. UTF-8 is written with newline translation disabled. The effect is a host write, not a graph-state update that checkpoint restoration can undo.</li><li><strong>Edits can normalize the whole file.</strong> The backend reads the entire file with universal-newline conversion, normalizes old/new strings to LF, applies exact replacement, then truncates and rewrites. An entire CRLF file can become LF. Unlike the remote sandbox helper, it does not try to preserve the first matching line-ending style. Read-modify-write is not an atomic patch transaction.</li><li><strong>Deletion follows the resolved path.</strong> It unlinks a leaf or recursively removes a directory. Although there is an explicit symlink-unlink branch, virtual resolution may already have followed the link to its target. Do not generalize the docstring’s “remove only the link” claim to every virtual alias. Middleware checks resolved targets; direct backend calls lack that protection.</li></ul><aside class=\"callout\"><p><strong>Partial deletion is possible:</strong> directory removal may delete entries before a permission failure. An error is not evidence of no change. Use disposable workspaces or isolated volumes for experiments with agent-generated modifications.</p></aside><details><summary>Remote deletion: shell quoting is not root confinement either</summary><p><code>BaseSandbox.delete</code> probes existence, then passes a quoted literal path to <code>rm -rf</code>. Quoting prevents metacharacters splitting the argument; it does not confine deletion to an application root. Whatever the sandbox shell can reach remains within its deletion authority.</p><p>A nonzero existence probe can mean absent or unstatable. An unknown probe exit falls through rather than inventing a not-found diagnosis. Recursive removal can also partly succeed before an error. These are backend-specific filesystem effects, separate from execution-output capture.</p></details>",
+        "sources": [
+          {
+            "path": "libs/deepagents/deepagents/backends/filesystem.py",
+            "start": 433,
+            "end": 501,
+            "label": "Disk read implementation"
+          },
+          {
+            "path": "libs/deepagents/deepagents/backends/filesystem.py",
+            "start": 503,
+            "end": 600,
+            "label": "Overwrite and edit implementation"
+          },
+          {
+            "path": "libs/deepagents/deepagents/backends/filesystem.py",
+            "start": 602,
+            "end": 634,
+            "label": "Recursive deletion"
+          },
+          {
+            "path": "libs/deepagents/deepagents/backends/filesystem.py",
+            "start": 203,
+            "end": 223,
+            "label": "Resolution before delete"
+          },
+          {
+            "path": "libs/deepagents/deepagents/backends/sandbox.py",
+            "start": 2021,
+            "end": 2061,
+            "label": "Deletion and quoting boundary"
+          }
+        ]
+      },
+      {
+        "id": "filesystem-host-search",
+        "title": "Literal search, fallback engines, and partial evidence",
+        "body": "<p>Disk grep prefers ripgrep but can fall back to Python. An empty match list is not universal evidence that the requested path was successfully searched.</p><h3>Trace the search before broadening it</h3><ol class=\"explain-steps\"><li><strong>Validate input and choose an engine.</strong> Grep validates its include glob, resolves the search base, and tries ripgrep literal matching. If that cannot provide results, Python scans literal substrings. Nonexistent or traversal-rejected paths can yield an empty list instead of the read operation’s error shape.</li><li><strong>Check fallback-specific limits.</strong> Python scanning has a configurable file-size ceiling, default 10 MiB. Large files can be skipped; this is not a global size limit for every operation. Direct-backend grep also accepts <code>context_lines</code>, which the agent-facing schema intentionally does not expose.</li><li><strong>Keep useful matches and partial errors together.</strong> If matching files cannot be reread for context, grep can return matches plus an error. Diagnostics should preserve both rather than discard valid matches or claim complete evidence.</li><li><strong>Distinguish phase budgets from cancellation.</strong> Sync grep phases and the async wrapper have separate timeouts; the async default leaves room for ripgrep followed by Python fallback. That wait budget does not cancel worker threads. Diagnose resolution, glob syntax, preferred-engine failure, fallback limits, or context rereading first: broadening a timed-out query usually adds work.</li></ol>",
+        "sources": [
+          {
+            "path": "libs/deepagents/deepagents/backends/filesystem.py",
+            "start": 636,
+            "end": 721,
+            "label": "Search dispatch and partial errors"
+          },
+          {
+            "path": "libs/deepagents/deepagents/backends/filesystem.py",
+            "start": 173,
+            "end": 180,
+            "label": "Fallback size ceiling"
+          },
+          {
+            "path": "libs/deepagents/deepagents/backends/protocol.py",
+            "start": 20,
+            "end": 28,
+            "label": "Grep timeout relationship"
+          },
+          {
+            "path": "libs/deepagents/deepagents/backends/protocol.py",
+            "start": 568,
+            "end": 595,
+            "label": "Async wait limitation"
+          }
+        ]
+      },
+      {
+        "id": "filesystem-host-shell",
+        "title": "LocalShellBackend crosses to unrestricted host execution",
+        "body": "<p><code>LocalShellBackend</code> combines disk tools with execution. <code>root_dir</code> sets the subprocess working directory; <code>virtual_mode</code> governs only structured file operations. Commands retain the operating-system user’s authority over accessible host paths, parent directories, network connections, and other programs.</p><h3>Read the execution contract in three parts</h3><ol class=\"explain-steps\"><li><strong>Construction sets timeout and environment, not confinement.</strong> A positive default timeout is required, normally 120 seconds, and a local resource ID is generated. The command environment is empty unless supplied; <code>inherit_env</code> copies the parent environment and overlays supplied values. This reduces accidental inheritance, but accessible credentials on disk or other host resources remain accessible.</li><li><strong>Execution invokes a real shell.</strong> The command string goes directly to <code>subprocess.run(shell=True)</code>. Stdout/stderr are captured, stdin is <code>DEVNULL</code>, and non-Windows processes start a new session. Stderr lines are prefixed in combined output. An explicit environment may lack search paths or application settings, explaining differences from an interactive terminal.</li><li><strong>Output limits apply after capture.</strong> Only after the process returns is combined output encoded and clipped to the configured byte limit. A small returned budget does not bound captured memory. Ordinary nonzero command exits are execution responses with exit codes, not Python exceptions.</li></ol><aside class=\"callout\"><p><strong>No validator makes this a sandbox:</strong> a working directory is not a chroot; an empty environment is not a container; a timeout is not rollback. Implementing <code>SandboxBackendProtocol</code> does not certify isolation. Untrusted commands require a genuinely constrained environment and explicit approval policy.</p></aside>",
+        "sources": [
+          {
+            "path": "libs/deepagents/deepagents/backends/local_shell.py",
+            "start": 108,
+            "end": 205,
+            "label": "Construction, environment and defaults"
+          },
+          {
+            "path": "libs/deepagents/deepagents/backends/local_shell.py",
+            "start": 216,
+            "end": 251,
+            "label": "Explicit unrestricted-execution contract"
+          },
+          {
+            "path": "libs/deepagents/deepagents/backends/local_shell.py",
+            "start": 291,
+            "end": 343,
+            "label": "Subprocess and output handling"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "composite-routing",
+    "group": "Storage & safety",
+    "title": "CompositeBackend: a virtual mount table",
+    "kicker": "Routing storage does not route shell commands",
+    "summary": "Work through longest-prefix dispatch, mount roots, path rewriting, cross-backend searches and transfers, and the execution/default distinction.",
+    "readingMinutes": 12,
+    "sections": [
+      {
+        "id": "composite-routing-dispatch",
+        "title": "Longest matching mount wins, then the prefix disappears",
+        "body": "<p>A composite backend owns a default backend and virtual route-prefix dictionary. Routes select destinations; their names do not automatically create storage namespaces.</p><h3>How a path is dispatched</h3><ol class=\"explain-steps\"><li><strong>Try the longest route first.</strong> Routes are sorted by descending prefix length. A match is either the route root without its trailing slash or a path beginning with a component-delimited route prefix. Similar-looking sibling names do not match that prefix.</li><li><strong>Remove the mount prefix.</strong> A matched root becomes <code>/</code>; a descendant becomes its suffix with one leading slash. Unmatched paths pass to the default unchanged. Successful mutations restore the original external path in their result, so the model keeps using the mount name rather than the backend-local key.</li></ol><div class=\"table-wrap\"><table><thead><tr><th>Illustrative input</th><th>Routes</th><th>Selected target</th></tr></thead><tbody><tr><td><code>/memories</code></td><td><code>/memories/</code></td><td>memory backend, <code>/</code></td></tr><tr><td><code>/memories/a.txt</code></td><td><code>/memories/</code></td><td>memory backend, <code>/a.txt</code></td></tr><tr><td><code>/memories-private/a.txt</code></td><td><code>/memories/</code></td><td>default, unchanged path</td></tr><tr><td><code>/memories/team/a.txt</code></td><td><code>/memories/</code> and <code>/memories/team/</code></td><td>team backend, <code>/a.txt</code></td></tr></tbody></table></div><p>This table illustrates the routing algorithm; it is not executed output. Routed disk backends normally need virtual mode: their received <code>/a.txt</code> should be beneath the configured root, not at the host root.</p><aside class=\"callout\"><p><strong>Aliasing trap:</strong> if <code>/memories/</code> and <code>/cache/</code> point to the same store backend and namespace, <code>/memories/a.txt</code> and <code>/cache/a.txt</code> both become key <code>/a.txt</code>. Route names are not namespace components.</p><p><strong>Trusted configuration:</strong> the constructor documents slash conventions but simply stores the supplied dictionary and sorted entries. Treat route configuration as application wiring.</p></aside>",
+        "sources": [
+          {
+            "path": "libs/deepagents/deepagents/backends/composite.py",
+            "start": 195,
+            "end": 225,
+            "label": "Exact routing algorithm"
+          },
+          {
+            "path": "libs/deepagents/deepagents/backends/composite.py",
+            "start": 255,
+            "end": 291,
+            "label": "Route storage and sorting"
+          },
+          {
+            "path": "libs/deepagents/deepagents/backends/composite.py",
+            "start": 740,
+            "end": 776,
+            "label": "Mutation result remapping"
+          },
+          {
+            "path": "libs/deepagents/deepagents/backends/filesystem.py",
+            "start": 152,
+            "end": 167,
+            "label": "Virtual-mode mount semantics"
+          }
+        ]
+      },
+      {
+        "id": "composite-routing-bulk",
+        "title": "Root listing and cross-backend searches are different operations",
+        "body": "<p>A root listing, a routed search, and an aggregate search do different work. Composite mounts are routing rules, not a physical filesystem union. The path you supply determines whether the operation reaches one backend or several.</p><h3>Distinguish three search scopes</h3><p><strong>Illustrative trace, not executed:</strong> use a default backend with mounts declared in this order: <code>/memories/</code>, then <code>/archive/</code>. Neither mount matches <code>/notes</code>.</p><div class=\"table-wrap\"><table><thead><tr><th>Call</th><th>Work performed</th></tr></thead><tbody><tr><td><code>grep(\"TODO\", path=\"/notes\")</code></td><td>Default only, with <code>/notes</code> unchanged; no mounted store is searched</td></tr><tr><td><code>grep(\"TODO\", path=\"/memories\")</code></td><td>Memory backend only, with backend-local root <code>/</code></td></tr><tr><td><code>grep(\"TODO\", path=\"/\")</code> or omitted path</td><td>Default first, then routed backends in route declaration order</td></tr></tbody></table></div><h3>Follow an aggregate match budget</h3><p>For <code>grep(\"TODO\", path=\"/\", max_count=3)</code>, suppose the default contributes two matches and memory contributes one. These are assumed inputs to the following trace, not measured search results.</p><ol class=\"explain-steps\"><li><strong>Spend two matches on the default.</strong> The default receives cap 3 and returns two matches. Two of the three available slots are now occupied.</li><li><strong>Pass only the remaining budget to memory.</strong> The <code>/memories/</code> backend receives cap 1 at its local root. Its one match at <code>/brief.txt</code> is returned as <code>/memories/brief.txt</code>.</li><li><strong>Skip archive once no budget remains.</strong> The aggregate returns three matches and <code>truncated=True</code>. Archive was not inspected. Even if archive actually contains no matches, the flag conservatively reports incomplete coverage.</li></ol><p>Longest-prefix sorting chooses the backend for a particular path. It does not sort root-search fanout: the implementation iterates the original route dictionary after searching the default. Aggregate matches are not globally ranked.</p><h3>Listing, errors, and other aggregation details</h3><ul><li><strong>Listing a mount stays within that backend.</strong> Child paths are rewritten beneath the route prefix. Listing <code>/</code> instead asks the default for root entries, appends virtual route directories, and sorts; it does not recursively list every mounted store. A default-listing failure is surfaced rather than presenting mount directories as the whole world.</li><li><strong>One match budget covers the aggregate.</strong> Each subsequent route receives the remaining cap. At zero, later routes are skipped and truncation is reported. Exactly filling the budget can mark the result incomplete even if skipped routes would add nothing. Check whether an earlier backend consumed the budget when a match seems missing.</li><li><strong>Errors remain aggregate failures.</strong> A route error short-circuits instead of becoming default-only success. Glob merging sorts paths, combines truncation state, and remaps every routed match. A healthy backend’s result does not erase a failing backend’s contribution. First distinguish a routed search, default-only search, and aggregate-root search.</li></ul><aside class=\"callout\"><p><strong>No assumed POSIX mount semantics:</strong> aggregation includes backend-returned entries plus route entries. It does not imply mount-shadowing or deduplication, and it does not migrate default keys that happen to share a mounted-looking prefix.</p></aside>",
+        "sources": [
+          {
+            "path": "libs/deepagents/deepagents/backends/composite.py",
+            "start": 300,
+            "end": 352,
+            "label": "Root listing versus route listing"
+          },
+          {
+            "path": "libs/deepagents/deepagents/backends/composite.py",
+            "start": 459,
+            "end": 549,
+            "label": "Grep fanout and global budget"
+          },
+          {
+            "path": "libs/deepagents/deepagents/backends/composite.py",
+            "start": 152,
+            "end": 192,
+            "label": "Glob error and truncation merge"
+          }
+        ]
+      },
+      {
+        "id": "composite-routing-execution",
+        "title": "Execution always belongs to the default backend",
+        "body": "<p><code>CompositeBackend.execute</code> never parses commands for mount prefixes. Sync and async execution delegate only to a default implementing <code>SandboxBackendProtocol</code>; otherwise they raise an unsupported-execution error.</p><h3>Keep three boundaries separate</h3><ol class=\"explain-steps\"><li><strong>File routing does not route shell commands.</strong> A shell backend mounted only at <code>/remote/</code> does not enable execution through that route. A sandbox default plus a store at <code>/memories/</code> still runs commands in the sandbox, whose OS filesystem does not automatically contain store documents.</li><li><strong>Transfers are grouped, then reordered.</strong> Bulk upload/download groups requests by backend, tracks original indices, calls each batch API, and reconstructs responses in original order with original paths. Group processing is sequential, including async variants—not automatic concurrent fanout. Custom backends must return one response per input; the missing-response fallback can leave <code>error=None</code>, so malformed short responses are not robust success guarantees.</li><li><strong>Aggregate deletion support is not universal route support.</strong> The composite advertises deletion because it implements the method. A route can still lack it; the composite catches that route’s <code>NotImplementedError</code> and returns a structured deletion error.</li></ol><aside class=\"callout\"><p><strong>Illustrative failure mode, not executed:</strong> writing <code>/memories/preferences.txt</code> through a store route, then executing <code>cat /memories/preferences.txt</code>, can target different systems. A shared path string does not bridge them. Use file tools or explicitly transfer bytes into the execution environment first.</p></aside>",
+        "sources": [
+          {
+            "path": "libs/deepagents/deepagents/backends/composite.py",
+            "start": 814,
+            "end": 875,
+            "label": "Default-only execution"
+          },
+          {
+            "path": "libs/deepagents/deepagents/backends/composite.py",
+            "start": 877,
+            "end": 948,
+            "label": "Upload grouping and reconstruction"
+          },
+          {
+            "path": "libs/deepagents/deepagents/backends/composite.py",
+            "start": 950,
+            "end": 990,
+            "label": "Download response cardinality"
+          },
+          {
+            "path": "libs/deepagents/deepagents/backends/composite.py",
+            "start": 778,
+            "end": 812,
+            "label": "Per-route deletion support"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "remote-backends",
+    "group": "Storage & safety",
+    "title": "Remote execution, native adapters, and Context Hub commits",
+    "kicker": "One interface, several transport and durability contracts",
+    "summary": "Trace BaseSandbox command helpers, source-side output capture, LangSmith native transport, partner-specific failure behavior, and ContextHubBackend optimistic commit processing.",
+    "readingMinutes": 22,
+    "sections": [
+      {
+        "id": "remote-backends-base",
+        "title": "BaseSandbox turns execution into structured file operations",
+        "body": "<p><code>BaseSandbox</code> supplies structured file helpers for a provider that already offers execution and byte transfer. Subclasses provide <code>execute</code>, <code>upload_files</code>, <code>download_files</code>, and an identifier; commands and server-side scripts implement listing, reads, search, globbing, edits, and deletion.</p><h3>Read the helper mechanics in three parts</h3><ol class=\"explain-steps\"><li><strong>Read windows are selected remotely.</strong> A server-side Python script receives line-window arguments, limiting text crossing the provider boundary. Rendered output has a further roughly 500 KiB cap; binary data uses base64 rather than text slicing. Async helpers call <code>aexecute</code>, not invariably a thread around sync file methods, so a subclass can centralize native async transport.</li><li><strong>Writes have a preflight and a transfer.</strong> A command creates parents and validates the destination, then the subclass upload receives UTF-8 bytes. Empty upload responses cause assertion failure; reported upload errors become <code>WriteResult.error</code>. The source acknowledges a time-of-check/time-of-use window. Providers must honor their own parent-directory and error contracts; this distributed write is not atomic.</li><li><strong>Edits keep source files remote and reconcile line endings.</strong> Combined UTF-8 payload size selects an inline script or uploaded temporary old/new-string files. The edit script tries the original match and line-ending variants, transforming the replacement correspondingly. On mixed-ending files, replace-all affects the first matching style, not every normalized variant. This differs semantically from disk editing, not just in transport.</li></ol><aside class=\"callout\"><p><strong>Authority is inherited:</strong> these helpers do not partition the underlying execution primitive. A caller can touch whatever the sandbox shell can reach.</p></aside>",
+        "sources": [
+          {
+            "path": "libs/deepagents/deepagents/backends/sandbox.py",
+            "start": 1587,
+            "end": 1606,
+            "label": "Required subclass capabilities and authority"
+          },
+          {
+            "path": "libs/deepagents/deepagents/backends/sandbox.py",
+            "start": 1713,
+            "end": 1782,
+            "label": "Remote pagination and preflight"
+          },
+          {
+            "path": "libs/deepagents/deepagents/backends/sandbox.py",
+            "start": 1784,
+            "end": 1825,
+            "label": "Upload-based writes"
+          },
+          {
+            "path": "libs/deepagents/deepagents/backends/sandbox.py",
+            "start": 1827,
+            "end": 1871,
+            "label": "Edit payload dispatch and newline behavior"
+          }
+        ]
+      },
+      {
+        "id": "remote-backends-execution",
+        "title": "Execution output: offloaded is not the same as truncated",
+        "body": "<p>Start with execution itself, then consider how much output can be returned. <code>ExecuteResponse</code> contains combined stdout/stderr in <code>output</code>, a possibly unknown <code>exit_code</code>, and a <code>truncated</code> flag. Output retention is separate from whether the command succeeded.</p><h3>From command to result</h3><p><strong>Illustrative trace, not executed:</strong> assume a sandbox has <code>/notes/brief.txt</code> containing exactly <code>Goal: summarize\\n</code>, and a successful <code>cat</code> command with no transport clipping. Its backend result can be:</p><pre><code class=\"language-python\">response = sandbox.execute(\"cat /notes/brief.txt\")\n# ExecuteResponse(\n#     output=\"Goal: summarize\\n\",\n#     exit_code=0,\n#     truncated=False,\n# )</code></pre><p>The filesystem execute tool packages command metadata in a <code>ToolMessage.artifact</code>. Its <code>exit_code=0</code> describes command success. A command that ran and exited nonzero still has tool status “success”; validation that prevented execution instead has error status and no execution artifact. An unknown code proves neither success nor failure.</p><h3>Then decide where large output goes</h3><p><strong>Illustrative capture settings:</strong> enable compatible source capture and call <code>execute_with_offload</code> with <code>capture_path=\"/tmp/report-output.txt\"</code>, <code>max_inline_bytes=1024</code>, and <code>max_capture_bytes=8192</code>. These are explicit example settings, not defaults. Assume no additional provider-side clipping.</p><div class=\"table-wrap\"><table><thead><tr><th>Combined output emitted</th><th>Capture result</th><th>What remains available?</th></tr></thead><tbody><tr><td>512 bytes</td><td><code>offloaded=False</code>, <code>truncated=False</code></td><td>Complete inline output</td></tr><tr><td>4096 bytes</td><td><code>offloaded=True</code>, <code>truncated=False</code></td><td>Inline preview; complete output at the capture path</td></tr><tr><td>16384 bytes</td><td><code>offloaded=True</code>, <code>truncated=True</code></td><td>Inline preview; only capped retained output at the capture path, with excess discarded</td></tr></tbody></table></div><p><strong>Offloaded</strong> means “look in this file for retained output.” <strong>Truncated</strong> means “some output was discarded.” Reading every page of a truncated capture file cannot recover the discarded part. A capture path is not unlimited archival storage.</p><details><summary>Capture opt-in, completion codes, and trustworthy preview metadata</summary><ul><li><strong>Source capture is opt-in.</strong> For compatible sandbox images, a wrapper retains large combined output in a sandbox file and returns a preview. The base flag defaults to false because compatible shell/core utilities are required. Without it, execution is unwrapped and generic eviction can occur after full output reaches the caller. LangSmith explicitly opts in; inheriting <code>BaseSandbox</code> does not.</li><li><strong>Offload and truncation describe different facts.</strong> <code>ExecuteOffloadResult.offloaded</code> means output remains at the capture path; <code>response.truncated</code> means backend or capture limits discarded output. Offloaded contents may be complete or incomplete under the hard capture cap. Retained output is capped without killing the command, preserving its actual completion code.</li><li><strong>Trust metadata, not marker-like output.</strong> Preview metadata explicitly records whether the wrapper inserted its middle-lines truncation marker. It does not infer that by searching output: a command can print the same marker. Untrusted output text must not become an execution-status or truncation control signal.</li></ul></details>",
+        "sources": [
+          {
+            "path": "libs/deepagents/deepagents/backends/protocol.py",
+            "start": 809,
+            "end": 888,
+            "label": "Execution and artifact semantics"
+          },
+          {
+            "path": "libs/deepagents/deepagents/backends/sandbox.py",
+            "start": 1619,
+            "end": 1628,
+            "label": "Offload opt-in"
+          },
+          {
+            "path": "libs/deepagents/deepagents/backends/sandbox.py",
+            "start": 1650,
+            "end": 1683,
+            "label": "Capture limits and fallback"
+          },
+          {
+            "path": "libs/deepagents/deepagents/backends/langsmith.py",
+            "start": 56,
+            "end": 61,
+            "label": "LangSmith capture opt-in"
+          }
+        ]
+      },
+      {
+        "id": "remote-backends-langsmith",
+        "title": "LangSmithSandbox specializes transport and owns an async pool",
+        "body": "<p>The LangSmith adapter wraps an existing provider sandbox; its constructor does not provision one. The sandbox name is its ID, and default command timeout is 30 minutes.</p><h3>Read the adapter contract in five parts</h3><ol class=\"explain-steps\"><li><strong>Execution preserves the provider result.</strong> It calls <code>run</code>, joins stdout/stderr, preserves exit code, and sets <code>truncated=False</code> at this layer. That means the adapter applied no clipping; it is not independent measurement of every upstream transport.</li><li><strong>The async pool belongs to one event loop.</strong> Cached async client/sandbox objects avoid repeated connection pools and handshakes from converting the synchronous provider object. <code>aclose</code> clears and closes the pool. Repeated runs and loop churn must respect ownership: do not leak clients or reuse them across loops.</li><li><strong>Native transfer overrides the synchronous read/write path.</strong> Writes still run inherited parent preflight, then send bytes through the SDK. Nearby docstrings discuss older inline-shell writes, but the current base already delegates to upload. Follow the pinned call graph rather than historical rationale.</li><li><strong>Native reads classify and cap returned data.</strong> They fetch bytes, classify extensions, use base64 for invalid UTF-8 text, normalize line endings, and cap rendered pages. When a later boundary line is cut, resume normally advances only past complete returned lines. If the first line alone is too large, it advances one line for progress: that giant line’s unseen suffix can be lost in this preview interface.</li><li><strong>Transfer error codes are mappings, not diagnoses.</strong> Batches require a leading slash. Downloads map resource-not-found to <code>file_not_found</code>, and other sandbox-client errors heuristically to directory or missing-file codes. Upload client errors map to <code>permission_denied</code>. Preserve provider logs when authentication, transport, or permissions appear unusually categorized; the mapped code does not prove the remote cause.</li></ol>",
+        "sources": [
+          {
+            "path": "libs/deepagents/deepagents/backends/langsmith.py",
+            "start": 31,
+            "end": 36,
+            "label": "Execution result translation"
+          },
+          {
+            "path": "libs/deepagents/deepagents/backends/langsmith.py",
+            "start": 63,
+            "end": 139,
+            "label": "Timeout and async pool lifecycle"
+          },
+          {
+            "path": "libs/deepagents/deepagents/backends/langsmith.py",
+            "start": 141,
+            "end": 167,
+            "label": "Native write implementation"
+          },
+          {
+            "path": "libs/deepagents/deepagents/backends/langsmith.py",
+            "start": 219,
+            "end": 292,
+            "label": "Read encoding and resume edge cases"
+          },
+          {
+            "path": "libs/deepagents/deepagents/backends/langsmith.py",
+            "start": 294,
+            "end": 353,
+            "label": "Transfer error mapping"
+          }
+        ]
+      },
+      {
+        "id": "remote-backends-partners",
+        "title": "Partner adapters share helpers but not identical guarantees",
+        "body": "<p>Partner packages inherit structured helpers from <code>BaseSandbox</code>, but primitive transports differ materially. This is a source-level comparison, not a report of hosted-service exercises. Resource isolation, lifecycle, image contents, network access, and provider durability remain external responsibilities.</p><div class=\"table-wrap\"><table><thead><tr><th>Adapter</th><th>Execution path</th><th>Transfer / failure nuance</th></tr></thead><tbody><tr><td>Modal</td><td><code>exec(\"bash\", \"-c\", command)</code>, wait, then read stdout/stderr; 30-minute default, zero waits indefinitely</td><td>Native sandbox file handles; known per-file filesystem errors normalized; handles closed in finally</td></tr><tr><td>Runloop</td><td>Devbox command API; 30-minute default; output and exit mapped directly</td><td>Download/upload loops do not catch per-file provider exceptions here; a failure can abort the batch</td></tr><tr><td>Daytona</td><td>Per-command session, asynchronous remote start, status polling, log retrieval under one deadline</td><td>Native batched transfers; upload API exceptions are not normalized per file here</td></tr><tr><td>Vercel</td><td>Detached <code>bash -lc</code>; wait thread implements caller timeout; best-effort kill</td><td>Per-file download mapping; valid uploads submitted as one batch and receive a shared batch failure</td></tr></tbody></table></div><h3>Three operational differences to keep visible</h3><ol class=\"explain-steps\"><li><strong>Daytona budgets the whole execution path.</strong> Session creation, command initiation, polling, and logs share one monotonic deadline. Timeout returns code 124, with one shared two-second best-effort cleanup budget for partial logs and session deletion. Each request uses remaining time, accounting for SDK timeout rounding and an added request buffer. Zero disables the deadline; bounded cleanup attempts and warnings do not prove resource removal.</li><li><strong>Vercel timeout cannot directly cancel the SDK wait.</strong> A daemon wait thread is joined for remaining time. On expiry, a kill is attempted and code 124 returned; a failed kill warns the command may continue and incur cost. If completion succeeds but log fetching fails, the exit code is retained with an explicit output-unavailable message. The output ceiling is named in bytes but slices Python string length—not precise UTF-8 bytes.</li><li><strong>Retry only with side effects in mind.</strong> Timeout or transfer exceptions can follow successful effects whose responses were lost. Blind retries can repeat commands or uploads. The base asks for per-item partial success, but Runloop and Daytona show why concrete adapters must be inspected: the abstraction does not automatically enforce every transfer guarantee.</li></ol>",
+        "sources": [
+          {
+            "path": "libs/partners/modal/langchain_modal/sandbox.py",
+            "start": 24,
+            "end": 119,
+            "label": "Modal primitives and per-file errors"
+          },
+          {
+            "path": "libs/partners/runloop/langchain_runloop/sandbox.py",
+            "start": 18,
+            "end": 78,
+            "label": "Runloop primitives and uncaught transfer calls"
+          },
+          {
+            "path": "libs/partners/daytona/langchain_daytona/sandbox.py",
+            "start": 146,
+            "end": 214,
+            "label": "Daytona shared deadline and cleanup"
+          },
+          {
+            "path": "libs/partners/daytona/langchain_daytona/sandbox.py",
+            "start": 251,
+            "end": 343,
+            "label": "Daytona polling and logs"
+          },
+          {
+            "path": "libs/partners/daytona/langchain_daytona/sandbox.py",
+            "start": 416,
+            "end": 481,
+            "label": "Daytona batch transfers"
+          },
+          {
+            "path": "libs/partners/vercel/langchain_vercel_sandbox/sandbox.py",
+            "start": 81,
+            "end": 131,
+            "label": "Vercel timeout, log failure and clipping"
+          },
+          {
+            "path": "libs/partners/vercel/langchain_vercel_sandbox/sandbox.py",
+            "start": 173,
+            "end": 200,
+            "label": "Vercel batch upload failures"
+          },
+          {
+            "path": "libs/partners/vercel/langchain_vercel_sandbox/sandbox.py",
+            "start": 235,
+            "end": 266,
+            "label": "Vercel wait-thread ownership"
+          }
+        ]
+      },
+      {
+        "id": "remote-backends-hub",
+        "title": "ContextHubBackend is a versioned text tree, not an execution sandbox",
+        "body": "<p><code>ContextHubBackend</code> stores files in a versioned LangSmith Hub agent repository, with no execution capability. Think of mutations as proposed commits against a known parent version, not as shell writes. If another writer commits first, the adapter must reload and reconsider the accepted operation.</p><h3>Why a conflict replays intent</h3><p><strong>Illustrative trace, not executed:</strong> your cached <code>/notes/brief.txt</code> contains <code>Status: draft\\nOwner: Ada\\n</code>. You request an exact edit from <code>Status: draft</code> to <code>Status: ready</code>. Meanwhile another writer changes only the owner to Lin and commits first.</p><ol class=\"explain-steps\"><li><strong>The initial push conflicts.</strong> Your push names the old parent commit, so it cannot simply replace the newer tree using its stale materialized file.</li><li><strong>Reload and reapply the edit request.</strong> The adapter fetches <code>Status: draft\\nOwner: Lin\\n</code> and reruns the exact replacement. The new proposed content becomes <code>Status: ready\\nOwner: Lin\\n</code>: it preserves the other writer’s owner change because the edit still matches.</li><li><strong>Reject an intent that is no longer valid.</strong> If the refreshed file no longer contains <code>Status: draft</code>, replay fails rather than blindly writing your cached full file. A plain write differs: its intent retains the supplied value, so it is not an automatic merge of authors’ text.</li></ol><h3>How queued mutations become durable</h3><p>A cold pull caches ordinary files as strings and records linked agents/skills separately; a missing repository is empty. Reads strip a leading slash, use the visible cache, and create fresh file-data metadata before slicing—not preserved remote creation history.</p><ol class=\"explain-steps\"><li><strong>Load the base tree and accept intent.</strong> Pull/cache the tree and parent commit when needed. Under one condition lock, validate edits against the visible tree and enqueue a mutation with intent, materialized changes, optional occurrence count, and completion event.</li><li><strong>Expose accepted changes while batching.</strong> Reads overlay in-flight and pending mutations on confirmed cache. A 50-millisecond window combines nearby writes into one push. Visibility is not yet durability: a successful write waits for its completion event rather than returning just after enqueueing.</li><li><strong>Push with optimistic concurrency.</strong> Merge a batch and push with <code>parent_commit</code>. On conflict, reload the remote tree, rematerialize edits and deletes in accepted order, and retry up to three conflicts beyond the initial attempt.</li><li><strong>Reapply intent, not stale edited contents.</strong> A write retains its supplied value; an edit reruns exact replacement on refreshed content and fails if invalid; deletion recomputes the refreshed subtree. Pending edits can be rejected even if the in-flight batch remains replayable.</li><li><strong>Settle every waiter.</strong> Success updates cache/commit identity, clears in-flight entries, and wakes waiters. Burst failure clears speculative state, invalidates cache, and settles affected waiters with the error. This includes unexpected worker exceptions.</li></ol><aside class=\"callout\"><p><strong>Text-transfer limits:</strong> only UTF-8 is accepted. Undecodable uploads get <code>invalid_path</code> despite encoding being the actual issue. Duplicate upload paths are last-write-wins within a batch.</p><p><strong>Search semantics differ:</strong> glob uses the shared matcher; grep includes use normalized <code>fnmatch</code>, where <code>*</code> crosses slashes. Grep’s path test is a raw prefix, so <code>/foo</code> can include <code>foobar...</code>. Use narrow canonical paths; do not assume grep and glob select identical sets.</p></aside>",
+        "sources": [
+          {
+            "path": "libs/deepagents/deepagents/backends/context_hub.py",
+            "start": 56,
+            "end": 59,
+            "label": "Batch and retry constants"
+          },
+          {
+            "path": "libs/deepagents/deepagents/backends/context_hub.py",
+            "start": 104,
+            "end": 174,
+            "label": "Cold cache and visible overlays"
+          },
+          {
+            "path": "libs/deepagents/deepagents/backends/context_hub.py",
+            "start": 188,
+            "end": 253,
+            "label": "Queue and durability wait"
+          },
+          {
+            "path": "libs/deepagents/deepagents/backends/context_hub.py",
+            "start": 263,
+            "end": 328,
+            "label": "Intent rematerialization"
+          },
+          {
+            "path": "libs/deepagents/deepagents/backends/context_hub.py",
+            "start": 345,
+            "end": 435,
+            "label": "Optimistic push and failure settlement"
+          },
+          {
+            "path": "libs/deepagents/deepagents/backends/context_hub.py",
+            "start": 462,
+            "end": 484,
+            "label": "Read-time file metadata"
+          },
+          {
+            "path": "libs/deepagents/deepagents/backends/context_hub.py",
+            "start": 596,
+            "end": 674,
+            "label": "Grep versus glob divergence"
+          },
+          {
+            "path": "libs/deepagents/deepagents/backends/context_hub.py",
+            "start": 676,
+            "end": 708,
+            "label": "Text-only batch upload"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "permissions-trust",
+    "group": "Storage & safety",
+    "title": "Permissions, approval, and the real security boundary",
+    "kicker": "Policy is a tool-layer gate, not universal authorization",
+    "summary": "Derive first-match decisions, exact versus bulk approval, recursive-delete exceptions, execution limitations, and prompt-trust boundaries from current implementation and regression evidence.",
+    "readingMinutes": 22,
+    "sections": [
+      {
+        "id": "permissions-trust-rules",
+        "title": "Read and write rules: ordered, default-allow, and path-sensitive",
+        "body": "<p>Filesystem permissions govern built-in file tools, not every way an agent can access data. Their operation type has exactly two values: <code>read</code> and <code>write</code>. Listing, reading, globbing, and grep are reads; writing, editing, and deletion are mutations. There is no filesystem-permission <code>execute</code> scope.</p><h3>Use one policy throughout this lesson</h3><p><strong>Illustrative configuration, not executed:</strong> use a file-only backend, with SDK approval wiring for interrupt rules. The following order deliberately permits the exact report, asks about review drafts, then denies other notes writes. The final rule protects private reads.</p><pre><code class=\"language-python\">from deepagents.middleware.filesystem import FilesystemPermission\n\npermissions = [\n    FilesystemPermission([\"write\"], [\"/notes/report.txt\"], \"allow\"),\n    FilesystemPermission([\"write\"], [\"/notes/review/**\"], \"interrupt\"),\n    FilesystemPermission([\"write\"], [\"/notes/**\"], \"deny\"),\n    FilesystemPermission([\"read\"], [\"/notes/private/**\"], \"deny\"),\n]</code></pre><div class=\"table-wrap\"><table><thead><tr><th>Ordinary request</th><th>First applicable decision</th></tr></thead><tbody><tr><td>Read <code>/notes/brief.txt</code></td><td>No matching read rule: allow by default</td></tr><tr><td>Write <code>/notes/report.txt</code></td><td>Rule 1: allow, despite the later matching deny</td></tr><tr><td>Write <code>/notes/review/report.txt</code></td><td>Rule 2: interrupt eligibility, not the later rule 3 deny</td></tr><tr><td>Write <code>/notes/private/report.txt</code></td><td>Rule 3: deny</td></tr><tr><td>Read <code>/notes/private/key.txt</code></td><td>Rule 4: deny</td></tr><tr><td>Write <code>/scratch/report.txt</code></td><td>No matching write rule: allow by default</td></tr></tbody></table></div><p>This is not a complete allowlist. Merely listing allowed paths leaves unmatched paths accessible. A restrictive allowlist needs specific allows before an appropriate catch-all deny, while accounting separately for recursive deletion.</p><h3>How an ordinary decision is made</h3><ol class=\"explain-steps\"><li><strong>Validate rule patterns.</strong> <code>FilesystemPermission</code> contains operations, absolute path patterns, and allow/deny/interrupt mode. Patterns must start with a slash, reject parent-directory components after separator normalization, and reject standalone tilde components. Matching uses wcmatch brace expansion and globstar support.</li><li><strong>Select the first applicable rule.</strong> Scan declaration order, skip other operations, and return the first matching mode; no match means allow. A later deny does not override an earlier allow on a direct read or edit.</li><li><strong>Check requested and resolved paths.</strong> Wrappers normalize paths. For filesystem backends, a deny on either the requested path or symlink-resolved target blocks; resolution failures count as denied. Composite mounts resolve in the routed backend and remap into composite coordinates.</li></ol><details><summary>Ordinary precedence at a glance</summary><div class=\"table-wrap\"><table><thead><tr><th>Ordered matches for one operation and path</th><th>Ordinary result</th></tr></thead><tbody><tr><td>No matching rule</td><td>Allow</td></tr><tr><td>Allow, then deny</td><td>Allow</td></tr><tr><td>Deny, then allow</td><td>Deny</td></tr><tr><td>Interrupt, then deny</td><td>Interrupt eligibility; denial is not selected by that later rule</td></tr><tr><td>Requested path allows, resolved alias target denies</td><td>Deny through resolved-target check</td></tr></tbody></table></div></details><aside class=\"callout\"><p><strong>Custom output must be canonical:</strong> listings and matches need canonical absolute paths. Filtering compares returned strings against absolute rules; relative or noncanonical output can bypass intended filtering.</p><p><strong>Enforcement is at the tool boundary:</strong> <code>middleware.permissions</code> is only a compatibility re-export. Enforcement lives in <code>FilesystemMiddleware</code>, not backend methods. Direct <code>backend.read</code>, user tools, and middleware reading through a backend do not automatically inherit these rules.</p></aside>",
+        "sources": [
+          {
+            "path": "libs/deepagents/deepagents/middleware/filesystem.py",
+            "start": 163,
+            "end": 178,
+            "label": "Operation types and matching flags"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/filesystem.py",
+            "start": 367,
+            "end": 463,
+            "label": "Rule validation and resolution checks"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/permissions.py",
+            "start": 1,
+            "end": 5,
+            "label": "Compatibility re-export only"
+          },
+          {
+            "path": "libs/deepagents/deepagents/backends/protocol.py",
+            "start": 642,
+            "end": 648,
+            "label": "Absolute output-path requirement"
+          },
+          {
+            "path": "libs/deepagents/tests/unit_tests/test_permissions.py",
+            "start": 1100,
+            "end": 1116,
+            "label": "Noncanonical backend output limitation"
+          },
+          {
+            "path": "libs/deepagents/deepagents/graph.py",
+            "start": 494,
+            "end": 518,
+            "label": "Tool-level policy scope"
+          }
+        ]
+      },
+      {
+        "id": "permissions-trust-bulk",
+        "title": "Bulk read filtering and recursive deletion are special cases",
+        "body": "<p>Ordinary first-match decisions answer “may I touch this path?” A recursive deletion asks a wider question: “could anything removed below this path be protected?” Bulk discovery has another concern: which returned paths may the model see?</p><h3>Apply the same notes policy to deletion</h3><p><strong>Illustrative trace, not executed:</strong> suppose <code>/notes/report.txt</code> is a confirmed plain file with no descendants, and <code>/notes</code> contains that report and the brief.</p><ul><li><strong>Delete the plain report:</strong> ordinary write precedence applies. Rule 1 allows its exact path even though rule 3 later denies <code>/notes/**</code>.</li><li><strong>Delete the notes directory:</strong> the recursive check considers every overlapping deny-write pattern, regardless of earlier allows. Rule 3 blocks removing the subtree. Permission to remove the report does not authorize removing everything around it.</li><li><strong>Do not infer “leaf” from one exact key.</strong> Flat state or stores can contain both <code>/notes/report.txt</code> and <code>/notes/report.txt/attachment</code>. The latter makes deletion potentially recursive despite the file-like name.</li></ul><p>For discovery under the same policy, private read results are filtered out. This controls returned visibility; it does not promise that the backend never scanned denied bytes internally.</p><details><summary>Discovery root prechecks and filtering</summary><ul><li><strong>Filter discovered paths after discovery.</strong> Listing, globbing, and grep remove denied entries or matches, including resolved-target checks where supported. Interrupt-mode paths remain visible because approval happens earlier; hiding them afterward would silently remove data the user authorized.</li><li><strong>Use the tool’s actual root precheck.</strong> Glob authorizes explicit <code>path</code> or omitted-path <code>/</code>, then filters matches. A pattern mentioning an allowed directory cannot bypass a catch-all deny on root: supply an explicit allowed <code>path</code> and relative pattern. Explicit-path grep checks its root; pathless grep can skip that precheck and filter later. Stores may load an entire namespace before filtering.</li></ul></details><details><summary>How conservative recursive-delete detection works</summary><p>Listing probes distinguish a known leaf from a directory or ambiguous result. Known plain-file deletion uses ordinary first-match write precedence. If descendants may exist, every overlapping deny-write pattern is considered, even after an earlier allow. Empty directories remain conservative.</p><p>Literal patterns protect ancestor and descendant overlap; wildcard logic conservatively rejects possible protected descendants while permitting unrelated siblings. Regression assertions allow an exact workspace file despite a later catch-all deny, but block broader recursive directory deletion. Inspect overlap and leaf detection rather than only reordering rules.</p></details>",
+        "sources": [
+          {
+            "path": "libs/deepagents/deepagents/middleware/filesystem.py",
+            "start": 698,
+            "end": 718,
+            "label": "Denied-result filtering and interrupts"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/filesystem.py",
+            "start": 576,
+            "end": 599,
+            "label": "Leaf versus subtree detection"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/filesystem.py",
+            "start": 620,
+            "end": 695,
+            "label": "Recursive-delete precedence exception"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/filesystem.py",
+            "start": 2626,
+            "end": 2649,
+            "label": "Glob root authorization"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/filesystem.py",
+            "start": 2828,
+            "end": 2852,
+            "label": "Grep explicit-path precheck and filtering"
+          },
+          {
+            "path": "libs/deepagents/tests/unit_tests/test_permissions.py",
+            "start": 230,
+            "end": 266,
+            "label": "Leaf and recursive-delete regressions"
+          },
+          {
+            "path": "libs/deepagents/tests/unit_tests/test_permissions.py",
+            "start": 290,
+            "end": 322,
+            "label": "Flat-key descendant regression"
+          }
+        ]
+      },
+      {
+        "id": "permissions-trust-approval",
+        "title": "Interrupt rules are compiled into scope-aware HITL predicates",
+        "body": "<p>An <strong>interrupt</strong> asks a human to decide before a tool executes. <code>FilesystemMiddleware</code> enforces denies but does not itself pause execution. At graph construction, the SDK compiles interrupt-mode permissions into LangChain <code>HumanInTheLoopMiddleware</code> (HITL) configuration. Standalone filesystem middleware needs equivalent approval integration, or agent construction that wires the HITL layer.</p><h3>Follow an approved write, including edited arguments</h3><p><strong>Illustrative trace, not executed:</strong> keep the notes policy from the first section and request a write to <code>/notes/review/report.txt</code>.</p><ol class=\"explain-steps\"><li><strong>Find the effective decision.</strong> Rule 2 selects interrupt before rule 3’s broader deny. With generated SDK HITL configuration intact, this exact write is eligible for an approval pause.</li><li><strong>Let the human choose a decision.</strong> Generated approvals offer <code>approve</code>, <code>edit</code>, <code>reject</code>, and <code>respond</code>. Approving permits the proposed call to proceed through its normal tool checks; responding skips execution.</li><li><strong>Recheck the actual final arguments.</strong> If the human edits the destination to <code>/notes/private/report.txt</code>, the write wrapper checks that destination, selects rule 3, and denies the call. Approval of the earlier destination does not bypass deny checks on edited arguments.</li></ol><p>The SDK passes the decision contract to its dependency; it does not implement the entire human UI or durable resume transport. Nor should an application treat an approval prompt as proof that the eventual call is valid.</p><details><summary>Exact and bulk approval predicates</summary><ul><li><strong>Exact tools use ordered path decisions.</strong> Read, write, and edit normalize the named file and evaluate requested/resolved candidates. Approval fires if at least one decision is interrupt and none is deny. A denied symlink target suppresses an unnecessary prompt because the tool will reject it. Malformed paths do not prompt; later path validation rejects them.</li><li><strong>Bulk tools use conservative subtree overlap.</strong> For ls, glob, grep, and delete, the predicate precomputes literal anchors before wildcard portions of interrupt patterns. It checks whether the requested subtree can overlap an anchor. Missing paths fire for any relevant interrupt rule. Current-directory aliases <code>.</code>, empty string, and <code>./</code> collapse to root so they cannot evade approval.</li><li><strong>Conservative scope can over-prompt.</strong> A fully unanchored pattern such as <code>/**/secrets</code> anchors at root and can prompt on unrelated bulk calls. This tests reachability, not exhaustive actual matches or exact first-match precedence for every descendant. Glob separately checks its pattern: a harmless explicit path cannot hide an absolute protected pattern. Relative parent components also trigger approval conservatively, even if matcher validation later rejects them.</li></ul></details><aside class=\"callout\"><p><strong>Approval is not validity or durability:</strong> configure the application’s LangGraph checkpointer and thread handling for durable pause/resume. A permission rule alone does not provide suspended-run storage.</p></aside>",
+        "sources": [
+          {
+            "path": "libs/deepagents/deepagents/middleware/_fs_interrupt.py",
+            "start": 1,
+            "end": 47,
+            "label": "Policy-to-HITL mapping and scopes"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/_fs_interrupt.py",
+            "start": 78,
+            "end": 108,
+            "label": "Exact approval logic"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/_fs_interrupt.py",
+            "start": 111,
+            "end": 171,
+            "label": "Bulk anchors and pattern handling"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/_fs_interrupt.py",
+            "start": 174,
+            "end": 203,
+            "label": "Allowed decision contract"
+          },
+          {
+            "path": "libs/deepagents/tests/unit_tests/test_permissions.py",
+            "start": 647,
+            "end": 710,
+            "label": "Tool registration and alias regressions"
+          },
+          {
+            "path": "libs/deepagents/deepagents/graph.py",
+            "start": 965,
+            "end": 970,
+            "label": "HITL installation"
+          },
+          {
+            "path": "libs/deepagents/deepagents/graph.py",
+            "start": 1014,
+            "end": 1016,
+            "label": "Application checkpoint dependency"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/filesystem.py",
+            "start": 2338,
+            "end": 2362,
+            "label": "Final write arguments checked before backend mutation"
+          }
+        ]
+      },
+      {
+        "id": "permissions-trust-precedence",
+        "title": "Overrides, subagents, and the execute gap",
+        "body": "<p>Approval policy follows the actual executing agent and tool boundary. Inheritance, replacement, and shell authority can all change what a parent-level rule appears to promise. Inspect the effective configuration, not just the original permissions list.</p><h3>Explicit False disables prompting, not denies</h3><p><strong>Illustrative override, not executed:</strong> keep the notes policy but supply <code>interrupt_on={\"write_file\": False}</code>. User entries replace generated entries by tool name; they are not combined with the generated predicate.</p><ul><li>A write to <code>/notes/review/report.txt</code> no longer pauses on its generated interrupt rule. The interrupt permission is not independently enforced as a pause after replacement.</li><li>A write to <code>/notes/private/report.txt</code> still encounters rule 3’s tool-level deny. <code>False</code> is not an authorization bypass; it only changes the approval layer.</li><li>Custom interrupt entries can likewise broaden or narrow prompting. Review them alongside filesystem rules rather than assuming both sets of predicates run.</li></ul><h3>The narrow CompositeBackend execution exception</h3><p>Filesystem permissions plus an execution-capable backend normally raise <code>NotImplementedError</code>. The exception accepts a composite only when every rule’s pattern string starts with a configured route prefix. It checks strings—not shell text, physical mount accessibility, or proof that routes are inaccessible to execution.</p><p><strong>Illustrative configurations, not executed:</strong> assume a valid execution-capable <code>sandbox</code> default and a separately configured <code>store_backend</code>, wired as <code>CompositeBackend(default=sandbox, routes={\"/memories/\": store_backend})</code>. The table describes the middleware’s permission-configuration guard, not a shell confinement test.</p><div class=\"table-wrap\"><table><thead><tr><th>Permission paths, in an otherwise valid nonempty rule list</th><th>Guard result</th><th>Reason</th></tr></thead><tbody><tr><td><code>[\"/memories/**\"]</code></td><td>Accepted by the guard</td><td>Every pattern starts with <code>/memories/</code></td></tr><tr><td><code>[\"/notes/**\"]</code></td><td>Rejected with <code>NotImplementedError</code></td><td>No configured route prefix matches</td></tr><tr><td><code>[\"/memories/**\", \"/notes/**\"]</code></td><td>Rejected with <code>NotImplementedError</code></td><td>Every pattern must qualify, not merely one</td></tr><tr><td><code>[\"/memories\"]</code></td><td>Rejected with <code>NotImplementedError</code></td><td>The route prefix contains the trailing slash; this bare root does not start with it</td></tr></tbody></table></div><p>Accepted route-scoped rules govern structured file tools while commands still execute on the default. They do not constrain the shell’s physical reach. Configure execute-tool <code>interrupt_on</code> and genuine runtime isolation; a host shell reaching routed files can bypass structured-tool denies. Custom network/database tools are likewise outside filesystem-path rules.</p><details><summary>Subagent policy replacement and remote boundaries</summary><p>Declarative subagents inherit parent permissions unless their own <code>permissions</code> field is present, replacing the entire list. Their explicit <code>interrupt_on</code> replaces inherited user configuration before permission-generated entries merge.</p><p>Precompiled and remote subagents do not automatically gain the parent’s internal approvals; configure their runnable or remote server. A parent approval setup is not automatically installed inside another executing agent.</p></details><h3>Debug the effective policy in order</h3><ol class=\"explain-steps\"><li><strong>Identify the executor and effective rules.</strong> Find the agent actually executing the tool and inspect its replaced or inherited permission list. Evaluate its first matching ordinary rule, then resolve aliases.</li><li><strong>Check scope and overrides before assuming protection.</strong> Account for bulk/delete semantics, inspect the final per-tool interrupt entry, and determine whether the operation bypasses these built-in tools entirely.</li></ol>",
+        "sources": [
+          {
+            "path": "libs/deepagents/deepagents/graph.py",
+            "start": 192,
+            "end": 208,
+            "label": "User interrupt override precedence"
+          },
+          {
+            "path": "libs/deepagents/deepagents/graph.py",
+            "start": 722,
+            "end": 740,
+            "label": "Subagent permission replacement"
+          },
+          {
+            "path": "libs/deepagents/deepagents/graph.py",
+            "start": 797,
+            "end": 801,
+            "label": "Subagent interrupt assembly"
+          },
+          {
+            "path": "libs/deepagents/deepagents/graph.py",
+            "start": 532,
+            "end": 543,
+            "label": "Compiled and remote approval boundary"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/filesystem.py",
+            "start": 739,
+            "end": 754,
+            "label": "Composite route exception predicate"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/filesystem.py",
+            "start": 2053,
+            "end": 2063,
+            "label": "Execute permissions unsupported"
+          },
+          {
+            "path": "libs/deepagents/deepagents/backends/local_shell.py",
+            "start": 224,
+            "end": 251,
+            "label": "Host command authority"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/filesystem.py",
+            "start": 2338,
+            "end": 2362,
+            "label": "Tool denies remain independent of HITL overrides"
+          }
+        ]
+      },
+      {
+        "id": "permissions-trust-threats",
+        "title": "Threat modeling from current code, not historical absolutes",
+        "body": "<p>The repository’s generated threat model targets an older commit and calls itself experimental and non-authoritative. Use it to locate concerns, then validate behavior against the current pin—not as a statement of current guarantees.</p><h3>Read the trust boundary in four parts</h3><ol class=\"explain-steps\"><li><strong>Separate historical claims from current code.</strong> The threat model describes a deprecated nonvirtual disk default; the current constructor defaults to virtual mode. It describes memory without sanitization or trust guidance; current formatting strips HTML comments and identifies memory files as data, not hidden instructions. Those old statements are stale at this revision.</li><li><strong>Limited preprocessing is not a prompt-injection firewall.</strong> Memory text still enters model context. Visible malicious instructions survive comment removal, which neither authenticates authors nor verifies claims. The prompt asks the model to prefer explicit user requests and verified evidence, but real enforcement needs narrow tool authority, correct backends, external isolation, and human review of consequential actions.</li><li><strong>Trace damage to real tool authority.</strong> One threat chain is poisoned repository content → misleading tool or memory context → model-generated command → permissive execution backend. State-only defaults cannot execute host commands by themselves; user tools or LocalShellBackend change that capability. Remote isolation depends on provider limits for credentials, mounts, egress, resources, and lifecycle.</li><li><strong>Make deployment choices at those boundaries.</strong> Derive namespaces from authenticated identity; keep host secrets out of workspaces; separate unrelated tenants into independently authorized storage and execution resources. Review approval overrides as code, retain machine-readable exit/truncation metadata, and never promise external rollback from a graph checkpoint. These are operational implications, not automatically provisioned SDK features.</li></ol><aside class=\"callout\"><p><strong>Evidence limits:</strong> these chapters inspect pinned SDK/partner implementation and selected regression assertions. They do not certify hosted isolation, external LangChain HITL internals, provider authentication, filesystem race resistance, or production durability. Illustrative traces were not executed. Cited tests document intended behavior and regression expectations, not passing runs.</p></aside>",
+        "sources": [
+          {
+            "path": "libs/deepagents/THREAT_MODEL.md",
+            "start": 1,
+            "end": 35,
+            "label": "Historical threat-model scope and caveat"
+          },
+          {
+            "path": "libs/deepagents/THREAT_MODEL.md",
+            "start": 320,
+            "end": 337,
+            "label": "Threat ownership discussion"
+          },
+          {
+            "path": "libs/deepagents/deepagents/backends/filesystem.py",
+            "start": 139,
+            "end": 167,
+            "label": "Current virtual default"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/memory.py",
+            "start": 104,
+            "end": 119,
+            "label": "Current memory trust instructions"
+          },
+          {
+            "path": "libs/deepagents/deepagents/middleware/memory.py",
+            "start": 258,
+            "end": 276,
+            "label": "Actual comment stripping and interpolation"
+          },
+          {
+            "path": "libs/deepagents/deepagents/backends/local_shell.py",
+            "start": 224,
+            "end": 251,
+            "label": "Real execution boundary"
+          },
+          {
+            "path": "libs/deepagents/deepagents/graph.py",
+            "start": 1014,
+            "end": 1016,
+            "label": "External persistence dependencies"
+          }
+        ]
+      }
+    ]
+  }
+]

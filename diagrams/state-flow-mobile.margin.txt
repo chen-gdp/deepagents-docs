@@ -1,0 +1,5 @@
+FILE: /home/christian/Projects/GAT/ai-agent/docs/deepagents-explorer/diagrams/state-flow-mobile.png
+  size: 640x900
+  content bbox: x=22..593, y=30..869
+  margins px: top=30, bottom=30, left=22, right=46
+  margins %: top=3.3, bottom=3.3, left=3.4, right=7.2

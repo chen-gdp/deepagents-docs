@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 495" width="760" height="495" role="img" aria-labelledby="title desc" style="--fg:#004987;--muted:#003a5c;--border:#005cb8;--surface:#fff;--accent:#40b4e5;--c5:#e7eef6">
+<title id="title">The controlled tool execution loop</title><desc id="desc">Inside the agent graph a model proposes a tool call. Middleware prepares or gates the call, then an allowed tool accesses the backend or external service. Tool results return to the next model decision. Controls do not make arbitrary tools safe.</desc>
+<defs><marker id="arrow" viewBox="0 0 8 8" refX="8" refY="4" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L8 4 L0 8 Z" fill="var(--border)"/></marker></defs>
+<rect x="20" y="30" width="720" height="275" fill="none" stroke="var(--border)" stroke-width="1.5"/>
+<g font-family="Arial, sans-serif" fill="var(--fg)">
+<text x="45" y="72" font-size="24" font-weight="700">Agent graph + harness middleware</text>
+<g text-anchor="middle">
+<rect x="50" y="125" width="180" height="100" rx="12" fill="var(--c5)" stroke="var(--border)" stroke-width="1.5"/>
+<text x="140" y="167" text-anchor="middle" font-size="23" font-weight="700">Model</text><text x="140" y="202" text-anchor="middle" font-size="20">Choose call</text>
+<rect x="290" y="125" width="180" height="100" rx="12" fill="var(--c5)" stroke="var(--border)" stroke-width="1.5"/>
+<text x="380" y="167" text-anchor="middle" font-size="23" font-weight="700">Middleware</text><text x="380" y="202" text-anchor="middle" font-size="20">Gate call</text>
+<rect x="530" y="125" width="180" height="100" rx="12" fill="var(--c5)" stroke="var(--border)" stroke-width="1.5"/>
+<text x="620" y="167" text-anchor="middle" font-size="23" font-weight="700">Allowed tool</text><text x="620" y="202" text-anchor="middle" font-size="20">Run tool</text>
+<line x1="230" y1="175" x2="290" y2="175" stroke="var(--border)" stroke-width="2" marker-end="url(#arrow)"/>
+<line x1="470" y1="175" x2="530" y2="175" stroke="var(--border)" stroke-width="2" marker-end="url(#arrow)"/>
+<path class="flow secondary" d="M590 225 V280 H140 V225" fill="none" stroke="var(--muted)" stroke-width="2" marker-end="url(#arrow)"/>
+<text x="365" y="264" text-anchor="middle" font-size="21" fill="var(--muted)">Tool result → next decision</text>
+<rect x="510" y="365" width="220" height="100" rx="12" fill="var(--c5)" stroke="var(--border)" stroke-width="1.5"/>
+<text x="620" y="407" text-anchor="middle" font-size="21" font-weight="700">Backend / API</text><text x="620" y="442" text-anchor="middle" font-size="21">Actual effects</text>
+<line x1="620" y1="225" x2="620" y2="365" stroke="var(--border)" stroke-width="2" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+</g></g></svg>

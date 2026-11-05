@@ -1,0 +1,39 @@
+FILE: /home/christian/Projects/GAT/ai-agent/docs/deepagents-explorer/diagrams/delegation-mobile.svg
+  canvas: 320.0x414.0
+  profile: default
+  coverage: text=8, rects=4, polygons=0, ellipses=0, connectors=3, segments=3, css_classes=0
+  [G1/G7][pass] effective text warnings: 0 (fit width 288px, scale 0.900)
+  [G3][pass] diagonal segments: 0
+  [G3][pass] marker warnings: 0
+  [G8][pass] overlapping rounded rects: 0
+  [G4][pass] title zone hits: 0
+  [G7][pass] text overflow warnings: 0
+  [G1/G2/G7][pass] label simplification warnings: 0
+  [G4/G7][pass] connector label clearance warnings: 0
+  [G4][pass] endpoint anchoring warnings: 0
+  [G4][pass] endpoint centerline warnings: 0
+  [G5/G8][pass] side-to-side dogleg warnings: 0
+  [G4/G5/G8][pass] long dogleg warnings: 0
+  [G8][pass] connected gap warnings: 0
+  [G4/G5][pass] stacked vertical lane warnings: 0
+  [G8/G9][pass] wiring harness warnings: 0
+  [G5/G8][pass] secondary connector dominance warnings: 0
+  [G5/G8][pass] split alignment warnings: 0
+  [G6][pass] legend warnings: 0
+  [G6][pass] legend swatch contrast warnings: 0
+  [G6][pass] palette warnings: 0
+  [G1/G2][pass] footer sentence warnings: 0
+  [G1/G2/G7][pass] body explanatory microtext warnings: 0
+  [G8/G9][pass] composition warnings: 0
+  [G1/G8][pass] spacing economy warnings: 0
+  [G8][pass] edge rhythm warnings: 0
+  [G7/G8][pass] container padding warnings: 0
+  [G8][pass] sibling gap warnings: 0
+  [G8][pass] rail alignment warnings: 0
+  [G7/G8][pass] rail compression warnings: 0
+  [G8/G9][pass] layer width warnings: 0
+  [G8][pass] shape consistency warnings: 0
+  [G8][pass] row alignment warnings: 0
+  [G8][pass] column alignment warnings: 0
+  [G5/G8][pass] branch balance warnings: 0
+  [G1/G6/G8][pass] legend canvas cost warnings: 0

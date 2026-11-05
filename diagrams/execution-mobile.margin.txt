@@ -1,0 +1,5 @@
+FILE: /home/christian/Projects/GAT/ai-agent/docs/deepagents-explorer/diagrams/execution-mobile.png
+  size: 640x1092
+  content bbox: x=14..625, y=30..1061
+  margins px: top=30, bottom=30, left=14, right=14
+  margins %: top=2.7, bottom=2.7, left=2.2, right=2.2

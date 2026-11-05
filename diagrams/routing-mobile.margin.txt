@@ -1,0 +1,5 @@
+FILE: /home/christian/Projects/GAT/ai-agent/docs/deepagents-explorer/diagrams/routing-mobile.png
+  size: 640x684
+  content bbox: x=14..625, y=30..653
+  margins px: top=30, bottom=30, left=14, right=14
+  margins %: top=4.4, bottom=4.4, left=2.2, right=2.2

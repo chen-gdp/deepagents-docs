@@ -1,0 +1,5 @@
+FILE: /home/christian/Projects/GAT/ai-agent/docs/deepagents-explorer/diagrams/layers.png
+  size: 1320x980
+  content bbox: x=78..1241, y=48..931
+  margins px: top=48, bottom=48, left=78, right=78
+  margins %: top=4.9, bottom=4.9, left=5.9, right=5.9
