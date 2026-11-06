@@ -119,7 +119,7 @@ function prepareReadingTables() {
 }
 
 function prepareDiagrams() {
-  const mobileHeights = {layers: 414, execution: 546, construction: 414, 'state-flow': 450, delegation: 414, routing: 342, 'code-processes': 400};
+  const mobileHeights = {layers: 414, execution: 546, construction: 414, 'state-flow': 450, delegation: 414, routing: 342, 'code-processes': 400, 'agent-loop-routing': 588, 'agent-loop-outcomes': 528, 'agent-loop-compiled': 726};
   main.querySelectorAll('.hero-art img, .diagram-panel img').forEach(image => {
     const name = image.getAttribute('src').split('/').at(-1).replace('.svg', '');
     const source = document.createElement('source');
@@ -350,7 +350,7 @@ function setupSearch() {
 
 async function boot() {
   try {
-    const content = await Promise.all(['sdk','backends','applications'].map(name => fetchJson(`content/${name}.json`)));
+    const content = await Promise.all(['sdk','backends','applications','agent-loop'].map(name => fetchJson(`content/${name}.json`)));
     const groupOrder = ['Foundations', 'Harness internals', 'Storage & safety', 'Applications', 'Engineering'];
     chapters = content.flat().sort((a, b) => groupOrder.indexOf(a.group) - groupOrder.indexOf(b.group));
     searchIndex = chapters.flatMap(chapter => chapter.sections.map(section => { const text = strip(section.body); return {chapter, section, text, search:`${chapter.title} ${section.title} ${text}`.toLowerCase()}; }));
@@ -373,7 +373,7 @@ async function boot() {
     try { document.documentElement.dataset.theme = localStorage.getItem('deepagents-theme') || 'light'; } catch { /* Use the default theme in restricted browsers. */ }
     await route();
   } catch (error) {
-    main.innerHTML = `<div class="wide-page"><h1>The guide could not load.</h1><p>${escape(error.message)}</p><p>Start the local HTTP server from this directory, then reload. The site needs all three content JSON files.</p></div>`;
+    main.innerHTML = `<div class="wide-page"><h1>The guide could not load.</h1><p>${escape(error.message)}</p><p>Start the local HTTP server from this directory, then reload. The site needs all chapter-content JSON files.</p></div>`;
   }
 }
 boot();

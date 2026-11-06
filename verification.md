@@ -1,6 +1,6 @@
 # Verification record
 
-The [large tool-output clarification](#large-tool-output-clarification-2026-11-05) records the latest focused content update. The [readability acceptance](#current-readability-acceptance) records the preceding all-chapter and responsive-layout baseline. Earlier browser and diagram runs below are retained as history, not claims that the latest content was re-exercised across every surface.
+The [agent-loop verification](#agent-loop-verification-2026-11-06) is the latest feature and all-chapter responsive check. The [large tool-output clarification](#large-tool-output-clarification-2026-11-05) and [readability acceptance](#current-readability-acceptance) remain historical records, not claims that every earlier integration check was repeated. The permanent publication is **https://chen-gdp.github.io/deepagents-docs/**; older Quick Tunnel URLs below are temporary historical previews.
 
 ## Revision and environment
 
@@ -11,6 +11,78 @@ The [large tool-output clarification](#large-tool-output-clarification-2026-11-0
 - Atlas generation and integrity probes used the existing Conda Python 3.12.12.
 - Diagram/capture helpers used `/tmp/deepagents-diagram-venv/bin/python`, whose `sys.base_prefix` is `/home/christian/miniconda3`. Pillow and Playwright were installed only in that isolated Conda-based environment, not in system Python.
 - Browser checks used real Chromium through the browser tool and the Conda-based Playwright environment. These were ad-hoc functional/visual checks, not an upstream test-suite run.
+
+## Agent-loop verification (2026-11-06)
+
+### Runtime and source evidence
+
+- New chapter: [`sdk-agent-loop`](https://chen-gdp.github.io/deepagents-docs/#/chapter/sdk-agent-loop), 12 sections. Total guide: 24 chapters, 117 sections, 604 valid atlas citation entries.
+- Unchanged Deep Agents source pin: `c4e2811312718e98b1465b6e67c34997ca72c793`, installed from the actual local clone at `/tmp/deepagents-study-source/libs/deepagents`.
+- Conda CPython 3.12.12 created this repository's `.venv`. Exact runtime: Deep Agents 0.7.32; LangChain 1.4.8/core 1.7.6; LangGraph 1.2.20/prebuilt 1.1.1; checkpoint 4.3.1; Pydantic 2.14.3. Full resolved versions: [`requirements-verification.txt`](requirements-verification.txt).
+- [`verify_agent_loop.py`](verify_agent_loop.py) executed **52 cases: 52 passed, 0 failed**. Model responses are deterministic fixtures; graph execution, tool handlers, schema parsing, checkpoints, human-review decisions, limits, and owned async-tool cleanup are real. Each case records whether it executes `create_deep_agent` or isolates `create_agent`.
+- [`evidence/agent-loop-runtime.json`](evidence/agent-loop-runtime.json) records model inputs/counts, correlated messages, real tool effects, graph topology, pending destinations, exceptions, and rubric observations. `max_concurrency=1` makes ordered assertions deterministic; it is not a production ordering guarantee.
+- The installed LangChain factory byte-matches release commit `5dcec1858191a6b54cd843dd8e54d856e2e007cc`. The retained [dependency source](evidence/langchain-1.4.8-agent-factory.py) has SHA-256 `cc4a7d9a620224558c4eddd4e13edc988a9ac9e328b7a67deeb71ed2c5ec5174`. The harness strictly checks complete-file hashes for that factory, the Deep Agents constructor, and rubric middleware—not every installed module.
+
+Measured distinctions incorporated into the chapter:
+
+1. Text such as “done,” an empty assistant response, provider `finish_reason`, normalized valid calls, and malformed `invalid_tool_calls` are separate observations. A malformed-only response can end the current invocation; startup repair happens on a later invocation.
+2. Ordinary tool results return to the model. All-direct batches can end, mixed direct/ordinary batches continue, and a tool's `Command(goto=END)` alone does not suppress the factory's tools-to-model edge.
+3. Schema-only ToolStrategy validation/multiple-output recovery can retry. **Mixed schema errors plus ordinary work ended without retry in both probes, with `structured_response=None`.** Corrective schema receipts defaulted to `status="success"`, satisfying the separate tools-router exit guard. Native-format invalid parsing raised rather than implicitly retrying.
+4. Middleware jumps and after-agent hooks can change the apparent exit. Call limits have distinct end/error/continue policies; rubric completion has explicit satisfied/failed/cap/grader-error outcomes. Private rubric fields were inspected in checkpoint values, not assumed present in `invoke()` output.
+5. Approval/edit/reject/respond pause and resume the same checkpointed thread. Errors, recursion limits, caller timeout, and cancellation are not successful END; pending nodes and completed external effects can remain.
+6. Inline child completion returns a correlated report to a continuing parent. Real remote background reconciliation, provider-hosted tools, transport disconnects, provider-side schema enforcement, and external-side-effect cancellation remain unexercised external boundaries.
+
+The deliberate grader-unavailable probe logs its expected exception; its asserted outcome passed. No upstream model/provider/network integration-suite pass or universal task-success claim is made.
+
+### Website exercises
+
+Preview origin: `http://127.0.0.1:8794/`, served from this repository with `/home/christian/miniconda3/bin/python -m http.server 8794 --bind 127.0.0.1`.
+
+| Check | Observed result |
+| --- | --- |
+| All four content collections | Valid JSON; unique chapter/section IDs; all 604 citation paths and inclusive ranges valid |
+| Cited source bundles | All embedded texts in the ten referenced bundles matched manifest SHA-256 values |
+| Chapter examples | All 14 blocks parsed: 12 Python blocks with `ast.parse`, two Bash blocks with `bash -n` |
+| Application syntax | `node --check` passed for `app.js`, `chapter-diagrams.js`, `syntax.js`, and `walkthrough.js` |
+| Probe implementation | Ruff E/F/I/C901 passed with 120-column lines and maximum complexity 15; formatter reported unchanged after the final extension |
+| All 24 chapters | 48 rendered views at 1440px and 390px: expected sections, 16px reading font, no document overflow, decoded diagrams, code syntax tokens, mobile table cards |
+| Final agent-loop content | Rechecked at 1440px, 390px and 360px; three decoded diagrams, correct compact selection, no overflow, nine structured-output rows with retained header associations |
+| Navigation/search | Desktop `return_direct` result selected the direct-return section; mobile menu selected state and new loop chapters and closed; Ctrl+K found malformed-call coverage |
+| Search dismissal | A first Escape cleared the nonempty native search field; a second Escape dismissed the dialog |
+| Source permalink | New construction citation opened `graph.py` and highlighted all 23 requested lines, 1008–1030, with Python syntax tokens |
+| Code copying | All four new Python blocks copied byte-for-byte; automation clipboard permission overrides were cleared between copies |
+| Theme/reference | Light/dark/light worked; Python tokens retained five distinct syntax colors in dark mode; source-only boundary disclosure opened |
+| Existing execution lab | Selected filesystem step 2; route became `scenario=filesystem&step=1` and state contained the expected user message |
+| Page exceptions | None during the recorded exercises; one aborted old diagram request occurred during rapid chapter navigation, with all current diagram images subsequently decoded |
+
+Browser measurements: [`evidence/agent-loop-browser.json`](evidence/agent-loop-browser.json).
+
+Visual/manual evidence inspected:
+
+- [Desktop compiled topology in the actual article](evidence/agent-loop-desktop.png), 1440px viewport.
+- [Compact compiled topology and caption](evidence/agent-loop-mobile-graph.png), actual 390px layout, component crop from a taller viewport so the sticky header does not obscure the figure.
+- [Mobile mixed-error scenario card](evidence/agent-loop-mobile-scenarios.png), 390×844 viewport.
+
+### Diagram validation: mandatory two passes
+
+Evidence classification: geometry/margin scripts provide script-backed supporting measurements; semantic/composition judgments are script-assisted and visual/manual-only. Evidence sources were all six rendered PNG/fit-check pairs, plus the actual article captures above—not source text alone.
+
+| Desktop/mobile pair | Composition pass: G1, G2, G5, G6, G8, G9 | Mechanical pass: G3, G4, G7 |
+| --- | --- | --- |
+| `agent-loop-routing` | All pass | All pass |
+| `agent-loop-compiled` | All pass | All pass |
+| `agent-loop-outcomes` | G1/G2/G6/G8/G9 pass; G5 not applicable to a non-directional comparison | G7 passes; G3/G4 not applicable without connectors |
+
+Each stem under [`diagrams/`](diagrams/) includes editable `.svg`, 2× `.png`, intended-width `.fitcheck.png`, `.heuristics.txt`, `.margin.txt`, and `.fitcheck.margin.txt`; compact stems end in `-mobile`. Fit widths are 660px and 288px. The compiled graph has the measured six nodes/eight edges; labels shorten the two hook names, mapped explicitly in its caption. It is not a universal topology for every configuration.
+
+Retained helper findings, manually resolved from rendered images:
+
+- G4/G5/G8 -> ordinary result-to-model return -> required execution cycle exceeds the generic dogleg heuristic; routed separately, without crossings -> informational.
+- G4 -> compiled model self-route -> offset top attachment distinguishes reentry from startup; no merged shafts or obscured node -> informational.
+- G4/G5/G8 -> compiled alternate routes -> long doglegs preserve actual conditional bypass/return edges rather than inventing a bus -> informational.
+- G1 -> desktop compiled spine -> measured 19.5% left whitespace preserves the centered spine and alternate lanes; fit text remains at least 21px -> informational.
+
+All applicable gates pass. No unresolved red/yellow defect remains. Geometry warnings alone were not treated as proof of a defect or as proof of readability.
 
 ## Large tool-output clarification (2026-11-05)
 

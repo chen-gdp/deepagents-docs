@@ -1,0 +1,5 @@
+FILE: /home/christian/Projects/deepagents-docs/diagrams/agent-loop-routing-mobile.png
+  size: 640x1176
+  content bbox: x=22..625, y=30..1145
+  margins px: top=30, bottom=30, left=22, right=14
+  margins %: top=2.6, bottom=2.6, left=3.4, right=2.2

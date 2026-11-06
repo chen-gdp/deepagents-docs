@@ -8,6 +8,7 @@ A standalone, source-linked website for studying `langchain-ai/deepagents` at re
 
 - [Start reading](https://chen-gdp.github.io/deepagents-docs/#/)
 - [State, messages, and event contracts](https://chen-gdp.github.io/deepagents-docs/#/chapter/sdk-state)
+- [Agent loop and stop conditions](https://chen-gdp.github.io/deepagents-docs/#/chapter/sdk-agent-loop)
 - [100K-token tool-output walkthrough](https://chen-gdp.github.io/deepagents-docs/#/chapter/sdk-filesystem?section=sdk-filesystem-text-offload)
 - [Source repository](https://github.com/chen-gdp/deepagents-docs)
 
@@ -33,14 +34,15 @@ The standalone local checkout is `~/Projects/deepagents-docs`. Do not push the s
 
 ## What is included
 
-- 23 technical chapters and 105 cited sections, with concept-first introductions, concrete illustrative traces, short prose, meaningful numbered steps, and detailed implementation references.
+- 24 technical chapters and 117 cited sections, with concept-first introductions, concrete illustrative traces, short prose, meaningful numbered steps, and detailed implementation references.
 - SDK construction and public parameters; middleware ordering; state/reducers/checkpoints/streaming; filesystem and tool offload; isolated, forked, compiled and background delegation; memory/skills; compaction; model/profile-dependent behavior; rubric iteration.
+- A dedicated agent-loop chapter: actual compiled topology, ordered router guards, message/call correlation, direct returns, structured output, middleware policies, human-review pauses, failures, cancellation, and parent/child boundaries. All 52 credential-free probes exercise real compiled graphs; provider responses are controlled fixtures.
 - Backend protocols, storage lifetimes, host filesystem/shell boundaries, composite routing, remote providers, Context Hub, path permissions, human review and security caveats.
 - Deep Agents Code, Talon, ACP, all five partner packages, examples, evaluation infrastructure and contributor workflows.
 - A local source atlas: 1,705 text files, including all 1,233 tracked Python files in the pinned tree, with 30,338 class/function/method definitions. Binary assets, lockfiles, agent instructions and openwiki pages are intentionally excluded. Source is lazy-loaded by package; a large package bundle can be several megabytes.
 - Three deterministic execution walkthroughs: state-backed file write, approval, and inline subagent delegation. These are teaching projections, **not live model executions or captured traces**.
 - Search, desktop/mobile navigation, code copying, source-range permalinks, package/test filters, definition jumps, dark/light theme, keyboard search (`Ctrl/Cmd K`), and print styling.
-- Seven GDP Labs diagram topics: layering, the tool loop, construction, state/data flow, inline delegation, backend routing, and Code's client/server split. Each has desktop and compact narrow-screen SVG layouts, rendered PNGs, target-width fit previews, and helper reports.
+- Ten GDP Labs diagram topics: layering, the tool loop, construction, state/data flow, inline delegation, backend routing, Code's client/server split, ordinary-loop routing, measured compiled topology, and completion/pause/failure outcomes. Each has desktop and compact narrow-screen SVG layouts, rendered PNGs, target-width fit previews, and helper reports.
 - Python-aware syntax colors in examples and source files, with JSON/Bash and other source formats highlighted according to their actual language. The pinned PrismJS 1.30.0 bundle is local; no CDN requests or npm installation are needed to view the website.
 - An event-contract ownership table distinguishes LangGraph stream modes, native v3 projections, Code transport tuples, and beta async-subagent notifications.
 - A worked 100K-token tool-output example distinguishes token estimates from characters, follows write/preview/paged retrieval, and links to a complete-request budget calculation plus storage and failure limits.
@@ -49,7 +51,7 @@ Source citations have local links plus adjacent pinned GitHub links. The source 
 
 Chapter prose uses 16 px text. At viewport widths up to 980 px, comparison tables become labeled, full-width row cards while retaining table/header semantics, and diagrams select compact layouts that show complete flows without horizontal panning. Long code lines remain scrollable, with a visible narrow-screen hint and Copy control.
 
-Normal behavior is explained before implementation exceptions. Advanced reference material remains available in expandable sections and is included in chapter search. The ten full code blocks retain language-aware highlighting; their model/provider actions are illustrative, not execution evidence.
+Normal behavior is explained before implementation exceptions. Advanced reference material remains available in expandable sections and is included in chapter search. The fourteen full chapter code blocks retain language-aware highlighting. Model/provider examples remain illustrative; separately recorded runtime probes identify exactly what was executed.
 
 ## Source provenance and reproducibility
 
@@ -72,6 +74,22 @@ The exporter rejects a different HEAD and reads **immutable Git archive blobs**,
 
 To update to a new upstream revision, consciously update `PIN`, the app revision, source citations, chapter explanations and walkthrough references together, then regenerate and revalidate. Do not repin only the source bundles.
 
+## Reproduce agent-loop verification
+
+With your existing **Conda environment activated**, create an isolated environment from its Python:
+
+```bash
+python -m venv .venv
+.venv/bin/python -m pip install -r requirements-verification.txt
+.venv/bin/python verify_agent_loop.py
+```
+
+The recorded run used `/home/christian/miniconda3/bin/python` 3.12.12. Installation requires Git and network access; running the probes needs no model credentials or provider calls. These optional packages are **not** needed to serve the static website.
+
+`requirements-verification.txt` pins immutable Deep Agents source and the resolved dependency versions. The script checks the versions and full source hashes of the three inspected modules, then writes [runtime evidence](evidence/agent-loop-runtime.json). The dependency-owned router is retained as a [source snapshot](evidence/langchain-1.4.8-agent-factory.py), separately from the unchanged Deep Agents atlas.
+
+The 52 cases distinguish successful graph termination from interrupts and failures, including the measured mixed structured-output/error pitfall. They are not the upstream test suite, a live-model benchmark, or a proof that arbitrary external tools and services behave correctly. See [the verification record](verification.md#agent-loop-verification-2026-11-06) for exact boundaries and diagram scoring.
+
 ## Layout
 
 - `index.html`, `styles.css`, `app.js`: static application.
@@ -82,6 +100,7 @@ To update to a new upstream revision, consciously update `PIN`, the app revision
 - `source/index.json`: file metadata, SHA-256 hashes, definitions and provenance.
 - `source/*.json`: complete text source, bundled by repository package.
 - `build_source_index.py`: reproducible offline-source exporter.
+- `verify_agent_loop.py`, `requirements-verification.txt`: optional, source-pinned executable graph verification.
 - `diagrams/`: editable diagrams and render/fit/helper evidence.
 - `verification.md`, `evidence/`: actual verification record and browser captures.
 - `UPSTREAM-LICENSE`: upstream MIT license for redistributed source.
@@ -103,3 +122,4 @@ See [verification.md](verification.md). Website behavior, source integrity and r
 - Corrected default-backend file seeding, ACP rebuild/checkpoint qualifications, headless shell-versus-file-tool permissions, and the example-local YAML mapping shape; reverified all chapters through the replacement public tunnel.
 - Added the 100K-token offload walkthrough, a concrete 100K-window input-budget example, and explicit limits for full-result understanding, application memory, failed writes, and restart durability; checked both changed chapters on desktop/mobile.
 - Prepared a standalone public repository with branch-based GitHub Pages publishing, `.nojekyll`, relative assets, retained upstream licensing, and a stable `github.io` reading URL.
+- Added the dedicated agent-loop chapter, three desktop/mobile diagram pairs, 52 source-pinned runtime probes, and explicit distinctions between completion, schema validity, application success, pauses, failures, and external/background boundaries.

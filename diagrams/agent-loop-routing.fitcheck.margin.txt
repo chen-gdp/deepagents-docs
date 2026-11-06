@@ -1,0 +1,7 @@
+FILE: /home/christian/Projects/deepagents-docs/diagrams/agent-loop-routing.fitcheck.png
+  size: 660x540
+  content bbox: x=23..640, y=15..524
+  margins px: top=15, bottom=15, left=23, right=19
+  margins %: top=2.8, bottom=2.8, left=3.5, right=2.9
+
+Fit preview: 660px image width; helper page viewport trimmed to the image frame (660x540), without cropping diagram content.

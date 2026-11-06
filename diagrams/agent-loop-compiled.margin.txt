@@ -1,0 +1,8 @@
+FILE: /home/christian/Projects/deepagents-docs/diagrams/agent-loop-compiled.png
+  size: 1320x1408
+  content bbox: x=258..1221, y=30..1377
+  margins px: top=30, bottom=30, left=258, right=98
+  margins %: top=2.1, bottom=2.1, left=19.5, right=7.4
+  warning: left margin exceeds 10.0%
+
+G1 -> centered graph spine -> left margin warning is informational: the main spine is centered on the shared 660px article canvas, with separate right-hand self-route and bypass lanes. The inspected fit image retains at least 21px text and 15px top/bottom margins; no clipping or fit-readability defect.

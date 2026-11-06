@@ -1,0 +1,5 @@
+FILE: /home/christian/Projects/deepagents-docs/diagrams/agent-loop-outcomes-mobile.png
+  size: 640x1056
+  content bbox: x=14..625, y=30..1024
+  margins px: top=30, bottom=31, left=14, right=14
+  margins %: top=2.8, bottom=2.9, left=2.2, right=2.2

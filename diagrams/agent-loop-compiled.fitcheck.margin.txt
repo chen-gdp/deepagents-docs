@@ -1,0 +1,10 @@
+FILE: /home/christian/Projects/deepagents-docs/diagrams/agent-loop-compiled.fitcheck.png
+  size: 660x704
+  content bbox: x=129..610, y=15..688
+  margins px: top=15, bottom=15, left=129, right=49
+  margins %: top=2.1, bottom=2.1, left=19.5, right=7.4
+  warning: left margin exceeds 10.0%
+
+Fit preview: 660px image width; helper page viewport trimmed to the image frame (660x704), without cropping diagram content.
+
+G1 -> centered graph spine -> left margin warning is informational: the main spine is centered on the shared 660px article canvas, with separate right-hand self-route and bypass lanes. At 660px, the inspected fit image retains at least 21px text and 15px top/bottom margins; no clipping or fit-readability defect.
