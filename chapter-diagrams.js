@@ -1,4 +1,19 @@
 export const chapterDiagrams = {
+  'sdk-agent-loop-overview': {
+    name: 'agent-loop-routing', width: 660, height: 540,
+    alt: 'Simplified ordinary agent loop: a model returns an AIMessage; pending calls execute through the tool dispatcher and correlated results return to the model; no calls proceeds through completion hooks to END.',
+    caption: 'Simplified normal flow, not literal compiled topology. The branches are alternatives. Direct returns, structured output, already-answered calls, and hook-driven re-entry are explained separately below; an ordinary tool result is not itself the final answer.',
+  },
+  'sdk-agent-loop-graph': {
+    name: 'agent-loop-compiled', width: 660, height: 704,
+    alt: 'Measured six-node compiled graph: start, startup call repair, model, tools, parent notifier, and end. Conditional paths include model re-entry and tool-to-completion routing.',
+    caption: 'Extracted from the tested default custom-tools configuration: six nodes and eight possible edges, not a mandatory sequence. Short labels map to PatchToolCallsMiddleware.before_agent and _ParentNotifierMiddleware.after_agent. The actual graph JSON is in the runtime evidence; wrappers and other configurations can change behavior.',
+  },
+  'sdk-agent-loop-interrupt': {
+    name: 'agent-loop-outcomes', width: 660, height: 408,
+    alt: 'Non-directional comparison: completed means the invocation reached END, paused means a resumable interrupt, and failed or cancelled means abnormal termination. None guarantees task correctness or side-effect rollback.',
+    caption: 'Outcome categories, not successive stages. An interrupt is not END; an exception or cancellation is not ordinary completion. Any outcome may leave external side effects in place.',
+  },
   'sdk-construction-parameters': {
     name: 'construction', width: 660, height: 630,
     alt: 'Construction resolves model, profile and backend; prepares middleware stacks; builds a LangChain graph; returns a runnable for later execution.',

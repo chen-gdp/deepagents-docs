@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 660 408" width="660" height="408" role="img" aria-labelledby="title desc" style="--fg:#004987;--muted:#003a5c;--border:#005cb8;--c5:#e7eef6">
+<title id="title">Invocation outcomes are not task correctness</title>
+<desc id="desc">A non-directional comparison, not an execution graph or exact compiled topology. Completed invocation means control flow reached END, not that the task is correct. Paused or resumable means an interrupt, not END; a checkpoint enables resumption. Failed or cancelled means an exception or cancellation rather than normal completion. None of these outcomes implies rollback of side effects.</desc>
+<g font-family="Arial, sans-serif" text-anchor="middle" fill="var(--fg)">
+<rect x="16" y="16" width="628" height="104" rx="12" fill="var(--c5)" stroke="var(--border)" stroke-width="1.5"/>
+<text x="330" y="57" text-anchor="middle" font-size="24" font-weight="700">Completed invocation</text>
+<text x="330" y="92" text-anchor="middle" font-size="21">Reached END ≠ task correctness</text>
+<rect x="16" y="136" width="628" height="104" rx="12" fill="var(--c5)" stroke="var(--border)" stroke-width="1.5"/>
+<text x="330" y="177" text-anchor="middle" font-size="24" font-weight="700">Paused / resumable</text>
+<text x="330" y="212" text-anchor="middle" font-size="21">Interrupt ≠ END · resume from a checkpoint</text>
+<rect x="16" y="256" width="628" height="104" rx="12" fill="var(--c5)" stroke="var(--border)" stroke-width="1.5"/>
+<text x="330" y="297" text-anchor="middle" font-size="24" font-weight="700">Failed / cancelled</text>
+<text x="330" y="332" text-anchor="middle" font-size="21">Exception or cancellation · not normal completion</text>
+<text x="330" y="392" text-anchor="middle" font-size="21" fill="var(--muted)">Any outcome can leave side effects in place.</text>
+</g></svg>

@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 588" width="320" height="588" role="img" aria-labelledby="title desc" style="--fg:#004987;--muted:#003a5c;--border:#005cb8;--c5:#e7eef6">
+<title id="title">Normal model and tool routing</title>
+<desc id="desc">Simplified, not exact compiled topology. A model produces an AIMessage. Its tool calls select exactly one branch: ordinary pending real calls dispatch through ToolNode or custom tool handlers, then correlated ToolMessages return to the next model decision; no tool calls proceeds through completion hooks to END. Explicit routing overrides, structured output, and direct-return tools are outside this normal-route diagram.</desc>
+<defs><marker id="arrow" viewBox="0 0 8 8" refX="8" refY="4" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L8 4 L0 8 Z" fill="var(--border)"/></marker><marker id="return" viewBox="0 0 8 8" refX="8" refY="4" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L8 4 L0 8 Z" fill="var(--muted)"/></marker></defs>
+<g font-family="Arial, sans-serif" text-anchor="middle" fill="var(--fg)">
+<rect x="32" y="16" width="280" height="92" rx="12" fill="var(--c5)" stroke="var(--border)" stroke-width="1.5"/>
+<text x="172" y="54" text-anchor="middle" font-size="22" font-weight="700">Model decision</text>
+<text x="172" y="83" text-anchor="middle" font-size="18">Produces AIMessage</text>
+<rect x="32" y="150" width="280" height="98" rx="12" fill="var(--c5)" stroke="var(--border)" stroke-width="1.5"/>
+<text x="172" y="180" text-anchor="middle" font-size="20" font-weight="700">Latest AIMessage</text>
+<text x="172" y="205" text-anchor="middle" font-size="20">Tool calls?</text>
+<text x="172" y="228" text-anchor="middle" font-size="18" fill="var(--muted)">Choose exactly one</text>
+<rect x="32" y="310" width="128" height="98" rx="12" fill="var(--c5)" stroke="var(--border)" stroke-width="1.5"/>
+<text x="96" y="341" text-anchor="middle" font-size="20" font-weight="700">ToolNode</text>
+<text x="96" y="366" text-anchor="middle" font-size="18" font-weight="700">/ handler</text>
+<text x="96" y="390" text-anchor="middle" font-size="18">Real calls</text>
+<rect x="184" y="310" width="128" height="98" rx="12" fill="var(--c5)" stroke="var(--border)" stroke-width="1.5"/>
+<text x="248" y="354" text-anchor="middle" font-size="18" font-weight="700">Completion</text>
+<text x="248" y="383" text-anchor="middle" font-size="20" font-weight="700">hooks</text>
+<rect x="32" y="474" width="128" height="98" rx="12" fill="var(--c5)" stroke="var(--border)" stroke-width="1.5"/>
+<text x="96" y="504" text-anchor="middle" font-size="20" font-weight="700">Tool</text>
+<text x="96" y="530" text-anchor="middle" font-size="20" font-weight="700">Messages</text>
+<text x="96" y="556" text-anchor="middle" font-size="18">By call ID</text>
+<rect x="184" y="474" width="128" height="98" rx="12" fill="var(--c5)" stroke="var(--border)" stroke-width="1.5"/>
+<text x="248" y="531" text-anchor="middle" font-size="24" font-weight="700">END</text>
+<line x1="172" y1="108" x2="172" y2="150" stroke="var(--border)" stroke-width="2" marker-end="url(#arrow)"/>
+<line x1="96" y1="248" x2="96" y2="310" stroke="var(--border)" stroke-width="2" marker-end="url(#arrow)"/>
+<text x="108" y="279" font-size="18" text-anchor="start">Pending</text>
+<line x1="248" y1="248" x2="248" y2="310" stroke="var(--border)" stroke-width="2" marker-end="url(#arrow)"/>
+<text x="260" y="279" font-size="18" text-anchor="start">None</text>
+<line x1="96" y1="408" x2="96" y2="474" stroke="var(--border)" stroke-width="2" marker-end="url(#arrow)"/>
+<line x1="248" y1="408" x2="248" y2="474" stroke="var(--border)" stroke-width="2" marker-end="url(#arrow)"/>
+<path class="flow secondary" d="M32 523 H12 V62 H32" fill="none" stroke="var(--muted)" stroke-width="2" marker-end="url(#return)"/>
+</g></svg>

@@ -1,0 +1,51 @@
+FILE: /home/christian/Projects/deepagents-docs/diagrams/agent-loop-routing.svg
+  canvas: 660.0x540.0
+  profile: default
+  coverage: text=15, rects=6, polygons=0, ellipses=0, connectors=6, segments=8, css_classes=0
+  [G1/G7][pass] effective text warnings: 0 (fit width 660px, scale 1.000)
+  [G3][pass] diagonal segments: 0
+  [G3][pass] marker warnings: 0
+  [G8][pass] overlapping rounded rects: 0
+  [G4][pass] title zone hits: 0
+  [G7][pass] text overflow warnings: 0
+  [G1/G2/G7][pass] label simplification warnings: 0
+  [G4/G7][pass] connector label clearance warnings: 0
+  [G4][pass] endpoint anchoring warnings: 0
+  [G4][pass] endpoint centerline warnings: 0
+  [G5/G8][pass] side-to-side dogleg warnings: 0
+  [G4/G5/G8][warn] long dogleg warnings: 1
+    - long dogleg length/direct ratio 1.22 with 2 bends from (70.0,481.0) to (70.0,59.0)
+  [G8][pass] connected gap warnings: 0
+  [G4/G5][pass] stacked vertical lane warnings: 0
+  [G8/G9][pass] wiring harness warnings: 0
+  [G5/G8][pass] secondary connector dominance warnings: 0
+  [G5/G8][pass] split alignment warnings: 0
+  [G6][pass] legend warnings: 0
+  [G6][pass] legend swatch contrast warnings: 0
+  [G6][pass] palette warnings: 0
+  [G1/G2][pass] footer sentence warnings: 0
+  [G1/G2/G7][pass] body explanatory microtext warnings: 0
+  [G8/G9][pass] composition warnings: 0
+  [G1/G8][pass] spacing economy warnings: 0
+  [G8][pass] edge rhythm warnings: 0
+  [G7/G8][pass] container padding warnings: 0
+  [G8][pass] sibling gap warnings: 0
+  [G8][pass] rail alignment warnings: 0
+  [G7/G8][pass] rail compression warnings: 0
+  [G8/G9][pass] layer width warnings: 0
+  [G8][pass] shape consistency warnings: 0
+  [G8][pass] row alignment warnings: 0
+  [G8][pass] column alignment warnings: 0
+  [G5/G8][pass] branch balance warnings: 0
+  [G1/G6/G8][pass] legend canvas cost warnings: 0
+
+MANUAL VALIDATION GATE
+Evidence class: script-assisted plus visual/manual-only cold-read.
+Images inspected: agent-loop-routing.png and agent-loop-routing.fitcheck.png (660px display width).
+Composition pass: G1 PASS; G2 PASS; G5 PASS; G6 PASS; G8 PASS; G9 PASS.
+Mechanical pass: G3 PASS; G4 PASS; G7 PASS.
+G4/G5/G8 -> ToolMessages-to-model return -> helper flags one long dogleg (ratio 1.22); this is the required execution cycle, muted and routed outside the boxes without crossings or unrelated nodes -> informational, accepted from both inspected images.
+Cold-read: the Pending and None routes are explicitly exclusive. Registry examples live inside one dispatch node, not sequential tool nodes. Correlated results return to another model decision; answered calls alone do not imply END.
+DOM measurement: minimum source text 20px; minimum text-to-containing-box padding 9px (above the 8px failure floor); no text crosses a node boundary. SVG canvas background is rgba(0,0,0,0).
+Scope: simplified, not exact compiled topology. Advanced overrides, structured output and direct returns belong in surrounding chapter prose.
+Final disposition: no unresolved presentation defects; the single retained helper warning is informational, not a failed G gate.

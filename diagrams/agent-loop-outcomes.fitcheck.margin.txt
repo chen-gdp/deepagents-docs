@@ -1,0 +1,7 @@
+FILE: /home/christian/Projects/deepagents-docs/diagrams/agent-loop-outcomes.fitcheck.png
+  size: 660x408
+  content bbox: x=15..644, y=15..396
+  margins px: top=15, bottom=11, left=15, right=15
+  margins %: top=3.7, bottom=2.7, left=2.3, right=2.3
+
+Fit preview: 660px image width; helper page viewport trimmed to the image frame (660x408), without cropping diagram content.

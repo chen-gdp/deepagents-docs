@@ -1,0 +1,7 @@
+FILE: /home/christian/Projects/deepagents-docs/diagrams/agent-loop-compiled-mobile.fitcheck.png
+  size: 288x653
+  content bbox: x=10..278, y=13..635
+  margins px: top=13, bottom=17, left=10, right=9
+  margins %: top=2.0, bottom=2.6, left=3.5, right=3.1
+
+Fit preview: 288px image width; helper page viewport trimmed to the image frame (288x653), without cropping diagram content.

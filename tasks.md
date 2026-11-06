@@ -29,6 +29,18 @@ Build a standalone, dependency-free technical learning website for langchain-ai/
 - Regenerate compact SVG/PNG/fit/margin/geometry evidence; explicitly score both G1–G9 passes and resolve or explain heuristic findings.
 - Record exercised verification without claiming upstream provider/model test-suite success.
 
+## Agent-loop and stop-condition acceptance
+
+- Add a dedicated `sdk-agent-loop` chapter/sidebar entry using the existing reading, search, code-copy, source-link, and mobile-table components.
+- Verify the Deep Agents constructor handoff and the dependency-owned model/tools routing against an explicitly recorded compatible runtime. Keep the upstream Deep Agents pin unchanged; record exact installed dependency versions separately.
+- Run deterministic, credential-free probes through real compiled agents. Label controlled model responses as test fixtures, not genuine model reasoning or provider integration success.
+- Cover normal no-call exits, tool-result continuation, multiple calls, direct-return versus mixed tools, structured-output success/recovery and mixed-error exits, middleware routing, tool-issued commands, call-budget policies, rubric outcomes, approval pause/resume decisions, handled and unhandled errors, recursion limits, timeout/cancellation, context overflow, and parent/child completion boundaries. Distinguish runtime-exercised cases from source-only external-service behavior.
+- Show the actual graph extracted from the probed configuration, explain that tool handlers are not separate graph nodes, and distinguish that topology from a simplified execution loop.
+- Include source-linked scenario tables, message/ID examples, observed routing evidence, reproducible Python verification, and practical diagnostics. Completion is not proof that the requested work is correct.
+- Add rendered desktop/mobile loop and outcome diagrams with source, PNG, fit-check, margin/heuristic evidence, and explicit G1–G9 scoring.
+- Exercise the new chapter and existing navigation on desktop/mobile; publish through a feature branch and pull request, then verify the deployed GitHub Pages assets and route.
+
+
 
 ## Content interface
 

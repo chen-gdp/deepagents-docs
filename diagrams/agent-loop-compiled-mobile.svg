@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 726" width="320" height="726" role="img" aria-labelledby="title desc" style="--fg:#004987;--muted:#003a5c;--border:#005cb8;--c5:#e7eef6">
+<title id="title">Measured compiled graph for the tested default agent with custom tools</title>
+<desc id="desc">Exact nodes and edges from cases[0].graph in agent-loop-runtime.json; not universal across configurations. Short display names: Patch tool calls / before_agent is PatchToolCallsMiddleware.before_agent; Parent notifier / after_agent is _ParentNotifierMiddleware.after_agent. __start__ leads to before_agent, then model. Conditional model routes lead to itself, tools, or after_agent. Conditional tools routes lead to model or after_agent. after_agent leads to __end__. The model self-route is explicit. Individual registered tools are not separate graph nodes.</desc>
+<defs><marker id="arrow" viewBox="0 0 8 8" refX="8" refY="4" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L8 4 L0 8 Z" fill="var(--border)"/></marker><marker id="return" viewBox="0 0 8 8" refX="8" refY="4" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L8 4 L0 8 Z" fill="var(--muted)"/></marker></defs>
+<g font-family="Arial, sans-serif" fill="var(--fg)">
+<rect x="90" y="16" width="140" height="48" rx="12" fill="var(--c5)" stroke="var(--border)" stroke-width="1.5"/>
+<text x="160" y="47" text-anchor="middle" font-size="20" font-family="monospace" font-weight="700">__start__</text>
+<rect x="52" y="104" width="216" height="84" rx="12" fill="var(--c5)" stroke="var(--border)" stroke-width="1.5"/>
+<text x="160" y="140" text-anchor="middle" font-size="20" font-weight="700">Patch tool calls</text>
+<text x="160" y="170" text-anchor="middle" font-size="18">before_agent</text>
+<rect x="52" y="244" width="216" height="76" rx="12" fill="var(--c5)" stroke="var(--border)" stroke-width="1.5"/>
+<text x="160" y="275" text-anchor="middle" font-size="22" font-family="monospace" font-weight="700">model</text>
+<text x="160" y="304" text-anchor="middle" font-size="18">Conditional routes</text>
+<rect x="52" y="386" width="216" height="76" rx="12" fill="var(--c5)" stroke="var(--border)" stroke-width="1.5"/>
+<text x="160" y="417" text-anchor="middle" font-size="22" font-family="monospace" font-weight="700">tools</text>
+<text x="160" y="446" text-anchor="middle" font-size="18">Conditional routes</text>
+<rect x="52" y="528" width="216" height="84" rx="12" fill="var(--c5)" stroke="var(--border)" stroke-width="1.5"/>
+<text x="160" y="564" text-anchor="middle" font-size="20" font-weight="700">Parent notifier</text>
+<text x="160" y="594" text-anchor="middle" font-size="18">after_agent</text>
+<rect x="90" y="658" width="140" height="48" rx="12" fill="var(--c5)" stroke="var(--border)" stroke-width="1.5"/>
+<text x="160" y="689" text-anchor="middle" font-size="20" font-family="monospace" font-weight="700">__end__</text>
+<line x1="160" y1="64" x2="160" y2="104" stroke="var(--border)" stroke-width="2" marker-end="url(#arrow)"/>
+<line x1="160" y1="188" x2="160" y2="244" stroke="var(--border)" stroke-width="2" marker-end="url(#arrow)"/>
+<line x1="160" y1="320" x2="160" y2="386" stroke="var(--border)" stroke-width="2" marker-end="url(#arrow)"/>
+<line x1="160" y1="462" x2="160" y2="528" stroke="var(--border)" stroke-width="2" marker-end="url(#arrow)"/>
+<line x1="160" y1="612" x2="160" y2="658" stroke="var(--border)" stroke-width="2" marker-end="url(#arrow)"/>
+<path class="flow secondary" d="M52 424 H12 V282 H52" fill="none" stroke="var(--muted)" stroke-width="2" marker-end="url(#return)"/>
+<path class="flow secondary" d="M268 262 H288 V222 H236 V244" fill="none" stroke="var(--muted)" stroke-width="2" marker-end="url(#return)"/>
+<path class="flow secondary" d="M268 282 H308 V570 H268" fill="none" stroke="var(--muted)" stroke-width="2" marker-end="url(#return)"/>
+</g></svg>
