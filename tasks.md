@@ -40,6 +40,15 @@ Build a standalone, dependency-free technical learning website for langchain-ai/
 - Add rendered desktop/mobile loop and outcome diagrams with source, PNG, fit-check, margin/heuristic evidence, and explicit G1–G9 scoring.
 - Exercise the new chapter and existing navigation on desktop/mobile; publish through a feature branch and pull request, then verify the deployed GitHub Pages assets and route.
 
+## Memory lifecycle and context acceptance
+
+- Keep the upstream source pin unchanged; distinguish file-based instructions, conversation state, cross-thread storage, semantic retrieval and process RAM.
+- Add an Execution Lab memory scenario using the existing walkthrough interface, with explicitly illustrative state and links to offline runtime evidence.
+- Explain stale memory caches after native file edits, namespace/storage lifetimes, and the difference between request compaction and raw-state retention.
+- Qualify request-budget estimates where memory is injected after the summarization counter; preserve existing chapter and section links.
+- Verify walkthrough navigation, chapter search, source citations, responsive tables and desktop/mobile rendering; record only exercised checks.
+- Publish through the existing GitHub Pages workflow only after explicit commit approval.
+
 
 
 ## Content interface

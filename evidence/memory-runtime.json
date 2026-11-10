@@ -1,0 +1,92 @@
+{
+  "python": "/home/christian/Projects/deepagents-docs/.venv/bin/python",
+  "conda_base": "/home/christian/miniconda3",
+  "versions": {
+    "deepagents": "0.7.32",
+    "langchain": "1.4.8",
+    "langgraph": "1.2.20"
+  },
+  "source_pin": "c4e2811312718e98b1465b6e67c34997ca72c793",
+  "installed_source_matches_atlas": {
+    "graph.py": true,
+    "middleware/memory.py": true,
+    "middleware/summarization.py": true,
+    "backends/store.py": true
+  },
+  "cases": {
+    "file_memory_checkpoint_cache": {
+      "status": "passed",
+      "same_thread_uses_cached_memory_after_external_edit": true,
+      "new_thread_loads_updated_file": true,
+      "html_comment_removed_from_prompt": true,
+      "second_turn_message_count": 4,
+      "new_thread_message_count": 2,
+      "memory_contents_hidden_from_public_output_but_present_in_checkpoint": true
+    },
+    "agent_memory_file_edit": {
+      "status": "passed",
+      "native_edit_file_changed_actual_file": true,
+      "same_run_prompt_still_uses_old_memory_cache": true,
+      "next_invocation_same_thread_still_uses_old_memory_cache": true,
+      "write_is_not_a_cache_invalidation_hook": true
+    },
+    "missing_file_empty_cache": {
+      "status": "passed",
+      "missing_file_skipped": true,
+      "empty_cache_not_automatically_refreshed": true,
+      "fresh_thread_loads_new_file": true
+    },
+    "cross_thread_store_namespaces": {
+      "status": "passed",
+      "same_namespace_visible_in_two_distinct_threads": true,
+      "different_namespace_does_not_read_same_file": true,
+      "store_implementation": "InMemoryStore; cross-thread sharing only, not restart durability or authorization proof"
+    },
+    "context_compaction_preserves_raw_state": {
+      "status": "passed",
+      "summary_calls": 1,
+      "model_request_message_count": 4,
+      "raw_state_message_count": 10,
+      "earliest_original_not_in_model_request": true,
+      "earliest_original_still_in_graph_state": true,
+      "summary_event_in_checkpoint": true,
+      "archive_paths": [
+        "/conversation_history/session_44653ac2a4aa469ca363aea649bdc43c.md"
+      ],
+      "earliest_original_in_archive": true,
+      "custom_threshold": "4 messages; keep 2; deterministic summarizer; not a production/default threshold"
+    },
+    "memory_visibility_at_compaction_counter": {
+      "status": "passed",
+      "observed_counter_calls": [
+        {
+          "has_memory": false,
+          "has_caller_system": true,
+          "tools_argument_present": true
+        }
+      ],
+      "counter_sees_caller_system_text": true,
+      "counter_does_not_see_later_memory_injection": true,
+      "actual_model_request_contains_memory": true,
+      "scope": "Native graph assembly with custom recording counter and high explicit trigger; no provider context-limit rejection was simulated."
+    }
+  },
+  "live_site_comparison": [
+    {
+      "path": "content/sdk.json",
+      "bytes": 156345,
+      "equals_local": true
+    },
+    {
+      "path": "walkthrough.js",
+      "bytes": 15026,
+      "equals_local": true
+    },
+    {
+      "path": "diagrams/execution.svg",
+      "bytes": 2774,
+      "equals_local": true
+    }
+  ],
+  "verified_at": "2026-11-10T08:42:09.011Z"
+}

@@ -382,3 +382,29 @@ No unresolved red/yellow visual findings remain in the compact set. The seven de
 ### Verification boundary
 
 The source-grounded examples remain illustrative. No upstream model/provider/integration suite was run, and no upstream application success or universal learner-comprehension claim is made. No commits were created.
+
+## Memory lifecycle addition — 2026-11-10
+
+### Source and runtime evidence
+
+- The source pin remains `c4e2811312718e98b1465b6e67c34997ca72c793` (DeepAgents 0.7.32).
+- [Research report](evidence/memory-research.md) and [six passing offline scenarios](evidence/memory-runtime.json) distinguish native file memory, checkpointed thread state, cross-thread store access, semantic retrieval, context projection and RAM.
+- Native file edits and external writes did not refresh the existing thread's memory cache; fresh threads loaded updated shared files.
+- Custom-threshold compaction retained 10 conversation messages in raw state while the model fixture received 4 messages including its system message.
+- A recording counter saw caller system text but not memory injected later; the actual model request included that memory. This verifies ordering/visibility, not a provider overflow failure.
+- Real native graphs, filesystem tools, memory hooks, stores and checkpoints ran; provider responses and summary text were deterministic fixtures. No external provider, restart-durability test or RAM profile is claimed.
+
+### Website smoke and visual checks
+
+- Added five cited sections while preserving existing chapter/section IDs: 24 chapters, 122 sections.
+- Exercised all six memory walkthrough steps and five new sections at desktop (1440×1000) and mobile (390×844): 22 successful views.
+- Checked Next/Previous, scenario switching, chapter search into the new cache section, and local source navigation with 82 requested lines highlighted.
+- Checked 404 citations backed by the pinned DeepAgents package for valid line ranges; this is a structural citation check, not a fresh audit of every authored claim.
+- Observed no document overflow in the final 22 views; table roles, header associations and responsive cards remained intact. Additional runtime checks at 320 px and 360 px also fit.
+- Reproduced and fixed a 2 px mobile overflow caused by the scenario selector's intrinsic width. Its width is now constrained to the available container; verified against a fresh stylesheet response.
+- No page exceptions were recorded. `node --check walkthrough.js` passed. Evidence files returned HTTP 200 from the local preview.
+- Inspected actual desktop/mobile screenshots for readable labels, numbered explanations and table/card layout. No diagram source was changed; no new diagram scoring is claimed.
+
+Evidence: [browser checks](evidence/memory-website.json), [desktop chapter](evidence/memory-types-desktop.png), [mobile chapter](evidence/memory-types-mobile.png), [mobile walkthrough](evidence/memory-walkthrough-mobile.png), [budget caveat](evidence/memory-budget-desktop.png).
+
+The user explicitly approved committing and publishing after these local checks. Live deployment was not yet verified when this record was authored; post-merge deployment evidence belongs in the publication PR.
