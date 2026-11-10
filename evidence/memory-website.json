@@ -1,0 +1,497 @@
+{
+  "verified_at": "2026-11-10T10:06:47.851Z",
+  "scope": "Local preview; not yet published",
+  "views": [
+    {
+      "viewport": "desktop",
+      "kind": "walkthrough",
+      "step": 0,
+      "url": "#/runtime?scenario=memory&step=0",
+      "title": "Choose the memory source and its lifetime",
+      "current": "0",
+      "overflow": false,
+      "sourceLinks": 3,
+      "state": {
+        "phase": "construction",
+        "backend": "FilesystemBackend (explicit)",
+        "memory_sources": [
+          "/AGENTS.md"
+        ],
+        "thread_id": "conversation-a",
+        "file_content": "Prefer English.",
+        "memory_contents": "not loaded yet"
+      }
+    },
+    {
+      "viewport": "desktop",
+      "kind": "walkthrough",
+      "step": 1,
+      "url": "#/runtime?scenario=memory&step=1",
+      "title": "Load the file when no cache exists",
+      "current": "1",
+      "overflow": false,
+      "sourceLinks": 1,
+      "state": {
+        "phase": "before_agent",
+        "memory_contents": {
+          "/AGENTS.md": "Prefer English."
+        },
+        "missing_files": "skipped",
+        "reload_condition": "memory_contents key is absent"
+      }
+    },
+    {
+      "viewport": "desktop",
+      "kind": "walkthrough",
+      "step": 2,
+      "url": "#/runtime?scenario=memory&step=2",
+      "title": "Include cached memory in the model request",
+      "current": "2",
+      "overflow": false,
+      "sourceLinks": 3,
+      "state": {
+        "phase": "model request projection",
+        "system_memory_fragment": "Prefer English.",
+        "conversation_history": "current thread messages",
+        "semantic_retrieval": false,
+        "full_memory_included": true
+      }
+    },
+    {
+      "viewport": "desktop",
+      "kind": "walkthrough",
+      "step": 3,
+      "url": "#/runtime?scenario=memory&step=3",
+      "title": "Save an updated preference with edit_file",
+      "current": "3",
+      "overflow": false,
+      "sourceLinks": 3,
+      "state": {
+        "phase": "after successful native edit",
+        "file_content": "Prefer concise English.",
+        "memory_contents": {
+          "/AGENTS.md": "Prefer English."
+        },
+        "tool_result": "file updated",
+        "cache_automatically_refreshed": false
+      }
+    },
+    {
+      "viewport": "desktop",
+      "kind": "walkthrough",
+      "step": 4,
+      "url": "#/runtime?scenario=memory&step=4",
+      "title": "Continue the same checkpointed thread",
+      "current": "4",
+      "overflow": false,
+      "sourceLinks": 2,
+      "state": {
+        "thread_id": "conversation-a",
+        "file_content": "Prefer concise English.",
+        "injected_cached_memory": "Prefer English.",
+        "startup_download_skipped": true,
+        "reason": "memory_contents key already exists"
+      }
+    },
+    {
+      "viewport": "desktop",
+      "kind": "walkthrough",
+      "step": 5,
+      "url": "#/runtime?scenario=memory&step=5",
+      "title": "Start a fresh thread on the shared backend",
+      "current": "5",
+      "overflow": false,
+      "sourceLinks": 2,
+      "state": {
+        "thread_id": "conversation-b",
+        "memory_contents": {
+          "/AGENTS.md": "Prefer concise English."
+        },
+        "previous_conversation_history_inherited": false,
+        "restart_durability": "not established by this example"
+      }
+    },
+    {
+      "viewport": "desktop",
+      "kind": "chapter-section",
+      "section": "sdk-knowledge-memory-types",
+      "url": "#/chapter/sdk-knowledge?section=sdk-knowledge-memory-types",
+      "title": "Memory supplies context; it is not one combined capability",
+      "overflow": false,
+      "tables": [
+        {
+          "width": 788,
+          "role": "table",
+          "headers": 3,
+          "cellsLinked": true
+        }
+      ],
+      "fontSize": "16px"
+    },
+    {
+      "viewport": "desktop",
+      "kind": "chapter-section",
+      "section": "sdk-knowledge-memory-refresh",
+      "url": "#/chapter/sdk-knowledge?section=sdk-knowledge-memory-refresh",
+      "title": "Saving a memory file does not refresh its active cache",
+      "overflow": false,
+      "tables": [
+        {
+          "width": 788,
+          "role": "table",
+          "headers": 3,
+          "cellsLinked": true
+        }
+      ],
+      "fontSize": "16px"
+    },
+    {
+      "viewport": "desktop",
+      "kind": "chapter-section",
+      "section": "sdk-knowledge-memory-storage",
+      "url": "#/chapter/sdk-knowledge?section=sdk-knowledge-memory-storage",
+      "title": "Choose the lifetime: one thread, shared files or semantic retrieval",
+      "overflow": false,
+      "tables": [
+        {
+          "width": 788,
+          "role": "table",
+          "headers": 3,
+          "cellsLinked": true
+        }
+      ],
+      "fontSize": "16px"
+    },
+    {
+      "viewport": "desktop",
+      "kind": "chapter-section",
+      "section": "sdk-context-retention",
+      "url": "#/chapter/sdk-context?section=sdk-context-retention",
+      "title": "A smaller model request is not a RAM cleanup",
+      "overflow": false,
+      "tables": [
+        {
+          "width": 788,
+          "role": "table",
+          "headers": 2,
+          "cellsLinked": true
+        },
+        {
+          "width": 788,
+          "role": "table",
+          "headers": 4,
+          "cellsLinked": true
+        },
+        {
+          "width": 788,
+          "role": "table",
+          "headers": 2,
+          "cellsLinked": true
+        }
+      ],
+      "fontSize": "16px"
+    },
+    {
+      "viewport": "desktop",
+      "kind": "chapter-section",
+      "section": "sdk-context-memory-budget",
+      "url": "#/chapter/sdk-context?section=sdk-context-memory-budget",
+      "title": "The counter may run before memory is added",
+      "overflow": false,
+      "tables": [
+        {
+          "width": 788,
+          "role": "table",
+          "headers": 2,
+          "cellsLinked": true
+        },
+        {
+          "width": 788,
+          "role": "table",
+          "headers": 4,
+          "cellsLinked": true
+        },
+        {
+          "width": 788,
+          "role": "table",
+          "headers": 2,
+          "cellsLinked": true
+        }
+      ],
+      "fontSize": "16px"
+    },
+    {
+      "viewport": "mobile",
+      "kind": "walkthrough",
+      "step": 0,
+      "url": "#/runtime?scenario=memory&step=0",
+      "title": "Choose the memory source and its lifetime",
+      "current": "0",
+      "overflow": false,
+      "sourceLinks": 3,
+      "state": {
+        "phase": "construction",
+        "backend": "FilesystemBackend (explicit)",
+        "memory_sources": [
+          "/AGENTS.md"
+        ],
+        "thread_id": "conversation-a",
+        "file_content": "Prefer English.",
+        "memory_contents": "not loaded yet"
+      }
+    },
+    {
+      "viewport": "mobile",
+      "kind": "walkthrough",
+      "step": 1,
+      "url": "#/runtime?scenario=memory&step=1",
+      "title": "Load the file when no cache exists",
+      "current": "1",
+      "overflow": false,
+      "sourceLinks": 1,
+      "state": {
+        "phase": "before_agent",
+        "memory_contents": {
+          "/AGENTS.md": "Prefer English."
+        },
+        "missing_files": "skipped",
+        "reload_condition": "memory_contents key is absent"
+      }
+    },
+    {
+      "viewport": "mobile",
+      "kind": "walkthrough",
+      "step": 2,
+      "url": "#/runtime?scenario=memory&step=2",
+      "title": "Include cached memory in the model request",
+      "current": "2",
+      "overflow": false,
+      "sourceLinks": 3,
+      "state": {
+        "phase": "model request projection",
+        "system_memory_fragment": "Prefer English.",
+        "conversation_history": "current thread messages",
+        "semantic_retrieval": false,
+        "full_memory_included": true
+      }
+    },
+    {
+      "viewport": "mobile",
+      "kind": "walkthrough",
+      "step": 3,
+      "url": "#/runtime?scenario=memory&step=3",
+      "title": "Save an updated preference with edit_file",
+      "current": "3",
+      "overflow": false,
+      "sourceLinks": 3,
+      "state": {
+        "phase": "after successful native edit",
+        "file_content": "Prefer concise English.",
+        "memory_contents": {
+          "/AGENTS.md": "Prefer English."
+        },
+        "tool_result": "file updated",
+        "cache_automatically_refreshed": false
+      }
+    },
+    {
+      "viewport": "mobile",
+      "kind": "walkthrough",
+      "step": 4,
+      "url": "#/runtime?scenario=memory&step=4",
+      "title": "Continue the same checkpointed thread",
+      "current": "4",
+      "overflow": false,
+      "sourceLinks": 2,
+      "state": {
+        "thread_id": "conversation-a",
+        "file_content": "Prefer concise English.",
+        "injected_cached_memory": "Prefer English.",
+        "startup_download_skipped": true,
+        "reason": "memory_contents key already exists"
+      }
+    },
+    {
+      "viewport": "mobile",
+      "kind": "walkthrough",
+      "step": 5,
+      "url": "#/runtime?scenario=memory&step=5",
+      "title": "Start a fresh thread on the shared backend",
+      "current": "5",
+      "overflow": false,
+      "sourceLinks": 2,
+      "state": {
+        "thread_id": "conversation-b",
+        "memory_contents": {
+          "/AGENTS.md": "Prefer concise English."
+        },
+        "previous_conversation_history_inherited": false,
+        "restart_durability": "not established by this example"
+      }
+    },
+    {
+      "viewport": "mobile",
+      "kind": "chapter-section",
+      "section": "sdk-knowledge-memory-types",
+      "url": "#/chapter/sdk-knowledge?section=sdk-knowledge-memory-types",
+      "title": "Memory supplies context; it is not one combined capability",
+      "overflow": false,
+      "tables": [
+        {
+          "width": 344,
+          "role": "table",
+          "headers": 3,
+          "cellsLinked": true
+        }
+      ],
+      "fontSize": "16px"
+    },
+    {
+      "viewport": "mobile",
+      "kind": "chapter-section",
+      "section": "sdk-knowledge-memory-refresh",
+      "url": "#/chapter/sdk-knowledge?section=sdk-knowledge-memory-refresh",
+      "title": "Saving a memory file does not refresh its active cache",
+      "overflow": false,
+      "tables": [
+        {
+          "width": 344,
+          "role": "table",
+          "headers": 3,
+          "cellsLinked": true
+        }
+      ],
+      "fontSize": "16px"
+    },
+    {
+      "viewport": "mobile",
+      "kind": "chapter-section",
+      "section": "sdk-knowledge-memory-storage",
+      "url": "#/chapter/sdk-knowledge?section=sdk-knowledge-memory-storage",
+      "title": "Choose the lifetime: one thread, shared files or semantic retrieval",
+      "overflow": false,
+      "tables": [
+        {
+          "width": 344,
+          "role": "table",
+          "headers": 3,
+          "cellsLinked": true
+        }
+      ],
+      "fontSize": "16px"
+    },
+    {
+      "viewport": "mobile",
+      "kind": "chapter-section",
+      "section": "sdk-context-retention",
+      "url": "#/chapter/sdk-context?section=sdk-context-retention",
+      "title": "A smaller model request is not a RAM cleanup",
+      "overflow": false,
+      "tables": [
+        {
+          "width": 344,
+          "role": "table",
+          "headers": 2,
+          "cellsLinked": true
+        },
+        {
+          "width": 344,
+          "role": "table",
+          "headers": 4,
+          "cellsLinked": true
+        },
+        {
+          "width": 344,
+          "role": "table",
+          "headers": 2,
+          "cellsLinked": true
+        }
+      ],
+      "fontSize": "16px"
+    },
+    {
+      "viewport": "mobile",
+      "kind": "chapter-section",
+      "section": "sdk-context-memory-budget",
+      "url": "#/chapter/sdk-context?section=sdk-context-memory-budget",
+      "title": "The counter may run before memory is added",
+      "overflow": false,
+      "tables": [
+        {
+          "width": 344,
+          "role": "table",
+          "headers": 2,
+          "cellsLinked": true
+        },
+        {
+          "width": 344,
+          "role": "table",
+          "headers": 4,
+          "cellsLinked": true
+        },
+        {
+          "width": 344,
+          "role": "table",
+          "headers": 2,
+          "cellsLinked": true
+        }
+      ],
+      "fontSize": "16px"
+    }
+  ],
+  "errors": [
+    {
+      "viewport": "desktop",
+      "errors": {
+        "entries": [],
+        "nextSeq": 0,
+        "dropped": 0
+      }
+    },
+    {
+      "viewport": "mobile",
+      "errors": {
+        "entries": [],
+        "nextSeq": 0,
+        "dropped": 0
+      }
+    }
+  ],
+  "search": {
+    "url": "#/chapter/sdk-knowledge?section=sdk-knowledge-memory-refresh",
+    "dialogOpen": false
+  },
+  "source": {
+    "url": "#/source?file=libs%2Fdeepagents%2Fdeepagents%2Fmiddleware%2Fmemory.py&line=87&end=168",
+    "highlightedLines": 82,
+    "text": true
+  },
+  "valid_pinned_citations_checked": 404,
+  "narrow_layout": [
+    {
+      "viewport": 320,
+      "documentWidth": 320
+    },
+    {
+      "viewport": 360,
+      "documentWidth": 360
+    }
+  ],
+  "evidence_assets": [
+    {
+      "path": "evidence/memory-runtime.json",
+      "status": 200
+    },
+    {
+      "path": "evidence/memory-research.md",
+      "status": 200
+    }
+  ],
+  "mobile_overflow_fix": {
+    "before_document_width": 392,
+    "viewport": 390,
+    "after_document_width": 390,
+    "cause": "Scenario selector intrinsic width",
+    "change": "Constrain scenario selector to its container"
+  }
+}
